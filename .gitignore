@@ -1,0 +1,21 @@
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Local data (raw downloads, parquet caches)
+data/raw/*
+!data/raw/.gitkeep
+data/cache/
+
+# OS
+.DS_Store
+
+# OMC plugin state
+.omc/
