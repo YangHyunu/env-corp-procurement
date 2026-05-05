@@ -19,3 +19,19 @@ data/cache/
 
 # OMC plugin state
 .omc/
+
+# 인제스트 상태 / 린트 히스토리 (로컬 메타)
+.ingest_state.md
+.brooks-lint-history.json
+
+# 학습 산출물 (재학습 가능 — 대용량)
+artifacts/
+
+# 분석 캐시 / 생성물 (재생성 가능)
+analysis/notebooks.zip
+analysis/figures/
+analysis/cluster_env_corp.csv
+analysis/notebooks/*.csv
+
+# 프론트엔드 의존성
+frontend/node_modules/
