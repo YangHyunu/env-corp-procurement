@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>환경공단 발주 추천 스코어링 — MVP 설명서</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --accent: #3a86ff;
+    --accent-2: #06a77d;
+    --warn: #ff006e;
+    --code-bg: #f4f4f5;
+    --border: #e5e5e5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    line-height: 1.65;
+    font-size: 15.5px;
+  }
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  h1 + .subtitle { color: var(--muted); margin-bottom: 32px; font-size: 14px; }
+  h2 {
+    font-size: 22px;
+    margin-top: 56px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+  h3 { font-size: 17px; margin-top: 32px; color: #444; }
+  .tldr {
+    background: #fffbe6;
+    border-left: 4px solid #faad14;
+    padding: 16px 20px;
+    margin: 24px 0;
+    border-radius: 4px;
+  }
+  .tldr strong { color: #d48806; }
+  .callout {
+    background: #f0f7ff;
+    border-left: 4px solid var(--accent);
+    padding: 12px 18px;
+    margin: 16px 0;
+    border-radius: 4px;
+    font-size: 14.5px;
+  }
+  .warn {
+    background: #fff1f0;
+    border-left-color: var(--warn);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  th { background: #f4f4f5; font-weight: 600; }
+  code {
+    font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 14px 18px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  .formula {
+    background: #f8f9fa;
+    border: 1px solid #e5e5e5;
+    padding: 14px 18px;
+    margin: 12px 0;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+    font-size: 14px;
+    overflow-x: auto;
+  }
+  .axis-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin: 14px 0;
+    background: white;
+  }
+  .axis-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .axis-name { font-weight: 700; font-size: 16px; }
+  .axis-weight {
+    background: var(--accent);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .axis-stub {
+    background: #999;
+  }
+  .axis-meta { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  figure { margin: 24px 0; }
+  figure img { max-width: 100%; border: 1px solid var(--border); border-radius: 4px; }
+  figcaption {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-align: center;
+  }
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .badge-mvp { background: #06a77d; color: white; }
+  .badge-v2 { background: #999; color: white; }
+  .badge-warn { background: var(--warn); color: white; }
+  .toc { background: white; padding: 16px 24px; border: 1px solid var(--border); border-radius: 6px; margin: 24px 0; }
+  .toc ol { margin: 0; padding-left: 22px; }
+  .toc li { margin: 4px 0; font-size: 14px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .step {
+    border-left: 3px solid var(--accent);
+    padding: 4px 16px;
+    margin: 12px 0;
+    background: white;
+    border-radius: 0 4px 4px 0;
+  }
+  .step-num { font-weight: 700; color: var(--accent); margin-right: 6px; }
+  small { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>환경공단 관급자재 발주 추천 — MVP 스코어링 설명서</h1>
+<div class="subtitle">2026-04-25 · feat/scoring-mvp 브랜치 · pipeline/scoring.py</div>
+
+<div class="tldr">
+  <strong>TL;DR</strong> — 발주 실무자가 (품목번호, 가중치 슬라이더, SR 필터)를 입력하면
+  <code>composite_score = Σ wᵢ · axisᵢ</code> 한 줄로 추천 BRN 5명을 반환합니다.
+  4개 점수 차원 (SR 0.35 / 실적 0.30 / 가격 0.20 / 공급 0.15) +
+  레이더 5축 (위 4 + risk_free·cluster_fit 2개 v2 스텁).
+  149개 품목 검증 완료, 24.8% 동점·42.3% cold-start 한계 발견.
+</div>
+
+<div class="toc">
+<strong>목차</strong>
+<ol>
+  <li><a href="#why">왜 추천 점수가 필요한가</a></li>
+  <li><a href="#sr">SR (사회적 가치) 뜻</a></li>
+  <li><a href="#axes">5축 레이더 vs 4개 점수 차원</a></li>
+  <li><a href="#formula">점수 공식 (단계별)</a></li>
+  <li><a href="#weights">가중치 — 슬라이더 동작</a></li>
+  <li><a href="#guards">가드레일 (SR floor, 하드 게이트)</a></li>
+  <li><a href="#example">실제 예시 — 수중펌프 top1 분해</a></li>
+  <li><a href="#limits">한계와 cold-start</a></li>
+  <li><a href="#eda">EDA 결과 (차트 5개)</a></li>
+  <li><a href="#next">팀 결정 게이트 + 다음 단계</a></li>
+</ol>
+</div>
+
+<h2 id="why">1. 왜 추천 점수가 필요한가</h2>
+
+<p>한국환경공단은 환경기초시설(소각·하수처리·바이오)을 만들 때 펌프·송풍기·약품·계측기 등 <strong>관급자재</strong>를 조달합니다. 같은 세부품명번호(예: <code>4015151301</code> 수중펌프)를 공급할 수 있는 업체가 수십~수백 곳이며, 발주 실무자는:</p>
+<ul>
+  <li>이 풀에서 누가 신뢰할 만한지 (낙찰 이력?)</li>
+  <li>SR 기업 우대 정책에 부합하는지 (여성·장애인·사회적기업?)</li>
+  <li>가격 경쟁력은 어떤지</li>
+  <li>공급 안정성 (반복 입찰자?)</li>
+</ul>
+<p>를 5분 안에 판단해야 합니다. 사람이 일일이 비교 못 하므로 <strong>점수화 + 정렬</strong>이 필요합니다.</p>
+
+<div class="callout">
+  스코어링 함수의 입력은 <code>(품목번호, 가중치, SR필터)</code>, 출력은 <code>top-K BRN + 점수 분해</code>.
+  슬라이더 움직이면 즉시 재정렬, 모델 재훈련 없음.
+</div>
+
+<h2 id="sr">2. SR (사회적 가치) 뜻</h2>
+
+<p><strong>SR = Social Responsibility</strong>. 한국 공공조달에서 정부가 우대해야 하는 사회적 약자/취약계층 기업 카테고리. 「사회적 가치 우선구매 촉진법」 제7조 근거.</p>
+
+<p>이 프로젝트에서 다루는 SR 3종 (조달업체 CSV에 들어있는 것):</p>
+
+<table>
+<thead><tr><th>컬럼</th><th>의미</th><th>데이터 신뢰도</th><th>해당 업체 비율 (전체 64만)</th></tr></thead>
+<tbody>
+<tr><td><code>female_ceo_flag</code></td><td>대표자가 여성</td><td><span class="badge badge-warn">⚠️ 자동판별 (실제 인증서 X)</span></td><td>9%</td></tr>
+<tr><td><code>disabled_corp_flag</code></td><td>장애인기업 인증</td><td>실제 인증 기반</td><td>0.98%</td></tr>
+<tr><td><code>social_corp_flag</code></td><td>사회적기업 인증</td><td>실제 인증 기반</td><td>0.54%</td></tr>
+</tbody>
+</table>
+
+<p><code>sr_count</code> = 0~3 (3개 다 보유한 업체는 53곳뿐).</p>
+
+<div class="callout warn">
+  <strong>주의</strong> — <code>female_ceo_flag</code>는 대표자 주민번호 성별 자동 판별이지 「여성기업확인서」 보유 여부가 아닙니다.
+  진짜 여성기업확인서·자활용사촌·창업기업 같은 SR은 외부 SR API로 보강해야 하는 v2 영역.
+</div>
+
+<h2 id="axes">3. 5축 레이더 vs 4개 점수 차원</h2>
+
+<p>대시보드 디자인 명세상 <strong>레이더 차트는 5축</strong>이지만, 실제 점수는 <strong>4개 차원</strong>으로 산출합니다.
+이 의도된 분리:</p>
+
+<ul>
+  <li><strong>레이더 5축</strong> = 사용자에게 보여줄 능력 프로파일 (시각화)</li>
+  <li><strong>점수 4축</strong> = 랭킹 정렬에 쓰는 가중합 (계산)</li>
+</ul>
+
+<table>
+<thead><tr><th>#</th><th>축 ID</th><th>UI 라벨</th><th>설명</th><th>레이더?</th><th>점수?</th></tr></thead>
+<tbody>
+<tr><td>1</td><td><code>supply_stability</code></td><td>공급안정성</td><td>이 품목 풀 내 award_count 기준 상대 위치</td><td>✓</td><td>w=0.15</td></tr>
+<tr><td>2</td><td><code>sr_diversity</code></td><td>SR다양성</td><td>sr_count / 3</td><td>✓</td><td>w=0.35</td></tr>
+<tr><td>3</td><td><code>track_record</code></td><td>낙찰실적</td><td>환경공단 낙찰 건수 + 평균 낙찰률 합성</td><td>✓</td><td>w=0.30</td></tr>
+<tr><td>4</td><td><code>risk_free</code></td><td>리스크없음</td><td>부정당제재 이력 없음 (<span class="badge badge-v2">v2</span>)</td><td>✓ (스텁=1.0)</td><td>w=0</td></tr>
+<tr><td>5</td><td><code>cluster_fit</code></td><td>군집적합성</td><td>HDBSCAN 클러스터 내 위치 (<span class="badge badge-v2">v2</span>)</td><td>✓ (스텁=0.5)</td><td>w=0</td></tr>
+<tr><td>—</td><td><code>price_competitiveness</code></td><td>가격경쟁력</td><td>1 - rank_pct(unit_price)</td><td>✗</td><td>w=0.20</td></tr>
+</tbody>
+</table>
+
+<p>가격은 점수 핵심 차원이지만 5축 레이더에는 자리가 없어서 시각적으로는 track_record에 포섭, 점수에는 별개. CLAUDE.md 5축 강제 + 가격 정보 보존을 동시에 만족.</p>
+
+<h2 id="formula">4. 점수 공식 (단계별)</h2>
+
+<p>한 BRN의 composite_score 계산 흐름:</p>
+
+<div class="step">
+  <span class="step-num">Step 1</span> 풀 가져오기 — <code>mart_item_supply ∩ mart_company_sr ∩ mart_company_master</code> WHERE item_code = X
+</div>
+
+<div class="step">
+  <span class="step-num">Step 2</span> 하드 게이트 — active_sanction (v2) + sr_filter 적용. 통과 못하면 풀에서 즉시 제외.
+</div>
+
+<div class="step">
+  <span class="step-num">Step 3</span> 각 축 raw score ∈ [0, 1] 계산
+</div>
+
+<h3>각 축이 어떻게 계산되는가</h3>
+
+<div class="axis-card">
+<div class="axis-head"><div class="axis-name">① supply_stability — 공급안정성</div><div class="axis-weight">w = 0.15</div></div>
+<div class="axis-meta">"이 품목 풀에서 이 BRN이 얼마나 자주 낙찰됐나"</div>
+<div class="formula">
+n = pool_size<br>
+rank = award_count 내림차순 RANK (낙찰 많을수록 1)<br>
+axis_supply_stability = (n − rank + 1) / n<br>
+∴ award_count == 0 → 0.0 (cold-start 페널티)
+</div>
+<small>예: 풀 100명, 1위 → 1.0 / 50위 → 0.51 / 100위 (낙찰 0건) → 0.0</small>
+</div>
+
+<div class="axis-card">
+<div class="axis-head"><div class="axis-name">② sr_diversity — SR다양성</div><div class="axis-weight">w = 0.35</div></div>
+<div class="axis-meta">"몇 개 SR 인증을 보유했나"</div>
+<div class="formula">
+axis_sr_diversity = sr_count / 3<br>
+sr_count ∈ {0, 1, 2, 3}
+</div>
+<small>0개 → 0.00 / 1개 → 0.33 / 2개 → 0.67 / 3개 → 1.00</small>
+</div>
+
+<div class="axis-card">
+<div class="axis-head"><div class="axis-name">③ track_record — 낙찰실적</div><div class="axis-weight">w = 0.30</div></div>
+<div class="axis-meta">"환경공단에 얼마나 자주, 얼마나 강하게 납품했나"</div>
+<div class="formula">
+norm_count = award_count / max(award_count in pool)<br>
+norm_rate  = avg_bid_rate / 100&nbsp;&nbsp;&nbsp;(NULL이면 가중치 0)<br>
+axis_track_record = 0.6 · norm_count + 0.4 · norm_rate · (rate가 NULL 아님)
+</div>
+<small>낙찰률은 입찰가 / 예정가 비율. 100%에 가까울수록 가격 매칭이 정확. NULL이면 count만으로 점수 산정</small>
+</div>
+
+<div class="axis-card">
+<div class="axis-head"><div class="axis-name">④ price_competitiveness — 가격경쟁력</div><div class="axis-weight">w = 0.20</div></div>
+<div class="axis-meta">"같은 품목 풀에서 단가가 싼가" (점수 only, 레이더 X)</div>
+<div class="formula">
+unit_price = award_total_amt / award_count<br>
+percentile_rank = 단가 오름차순 백분위 (싼 게 낮은 백분위)<br>
+axis_price_competitiveness = 1 − percentile_rank<br>
+&nbsp;&nbsp;&nbsp;단가 데이터 3건 미만 → 0.5 (중립)
+</div>
+<small>풀 단가 데이터 부족 시 점수 차원에서 중립 처리</small>
+</div>
+
+<div class="axis-card" style="background: #f8f8f8;">
+<div class="axis-head"><div class="axis-name">⑤ risk_free / cluster_fit — 레이더 전용 스텁</div><div class="axis-weight axis-stub">w = 0</div></div>
+<div class="axis-meta">MVP에서는 점수에 기여 X. 레이더에 표시만.</div>
+<div class="formula">
+risk_free = 1.0&nbsp;&nbsp;&nbsp;(부정당제재 데이터 없음, "v2 예정" 배지)<br>
+cluster_fit = 0.5&nbsp;&nbsp;&nbsp;(HDBSCAN 미실행, "v2 예정" 배지)
+</div>
+</div>
+
+<div class="step">
+  <span class="step-num">Step 4</span> 가중합 →
+  <div class="formula">
+    composite_score =<br>
+    &nbsp;&nbsp;0.35 · axis_sr_diversity<br>
+    + 0.30 · axis_track_record<br>
+    + 0.20 · axis_price_competitiveness<br>
+    + 0.15 · axis_supply_stability
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">Step 5</span> SR 소프트 플로어 —
+  풀에 SR ≥ 3 BRN 있으면 SR=0 후보 <code>composite_score -= 1.0</code> (demote)
+</div>
+
+<div class="step">
+  <span class="step-num">Step 6</span> 동점 처리 — <code>composite > sr_count > award_count > tenure</code> 순
+</div>
+
+<div class="step">
+  <span class="step-num">Step 7</span> Top-K 반환 + reason 템플릿 ("환경공단 낙찰 1건 (총 0.74억원) · 여성기업+장애인기업 · 이 품목 공급망 상위권")
+</div>
+
+<h2 id="weights">5. 가중치 — 슬라이더 동작</h2>
+
+<p>사용자가 대시보드에서 슬라이더로 가중치를 조절. 알고리즘은 dot product 한 번 더 돌릴 뿐 (모델 재훈련 X).</p>
+
+<table>
+<thead><tr><th>축</th><th>기본값</th><th>제약</th></tr></thead>
+<tbody>
+<tr><td>sr_diversity</td><td>0.35</td><td><strong>≥ 0.20</strong> (사회적 가치 우선구매 촉진법 제7조 법정 하한)</td></tr>
+<tr><td>track_record</td><td>0.30</td><td>—</td></tr>
+<tr><td>price_competitiveness</td><td>0.20</td><td>—</td></tr>
+<tr><td>supply_stability</td><td>0.15</td><td>—</td></tr>
+<tr><td><strong>합</strong></td><td><strong>1.00</strong></td><td>= 1.0 강제 (오차 ±0.001 허용)</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+  슬라이더 UI 예: SR 0.50으로 올리면 자동으로 다른 3축이 비례 축소.
+  서버는 검증만, 비례 조정은 클라이언트.
+</div>
+
+<h2 id="guards">6. 가드레일</h2>
+
+<h3>SR 소프트 플로어 (활성)</h3>
+<p>풀에 SR 인증 3개 이상 BRN 있으면 SR=0 후보를 <strong>−1.0 demote</strong>하여 SR>0 보다 항상 아래로.
+"SR 인증 풀이 충분한데 굳이 SR=0을 추천하지 않는다"는 정책.</p>
+
+<h3>하드 게이트 (구조만, MVP 미사용)</h3>
+<ul>
+  <li><strong>active_sanction</strong> — 부정당제재 활성 BRN 즉시 제외 (v2)</li>
+  <li><strong>sr_filter</strong> — 사용자가 "장애인기업만 보기" 등 강제 필터 ON 가능 (구현됨)</li>
+</ul>
+
+<h2 id="example">7. 실제 예시 — 수중펌프 top1 분해</h2>
+
+<p>품목 <code>4015151301</code> (수중펌프), 풀 444 BRN, SR 보유 13.5%, 1위:</p>
+
+<pre><code>BRN          : 8668603338
+corp_name    : 주식회사 대온
+sr_count     : 2 (여성기업 자동판별 + 장애인기업)
+award_count  : 1 (환경공단 1년 내 1회 낙찰)
+avg_bid_rate : 99.0%
+
+axis_supply_stability    = 1.00  (444명 풀에서 award 동률 1위)
+axis_sr_diversity        = 0.67  (2/3)
+axis_track_record        = 0.70  (0.6 × 1.0 + 0.4 × 0.99)
+axis_price_competitiveness = 0.50  (단가 데이터 부족)
+axis_risk_free           = 1.00  (스텁)
+axis_cluster_fit         = 0.50  (스텁)
+
+composite_score
+  = 0.15 × 1.00     # supply_stability  → 0.150
+  + 0.35 × 0.67     # sr_diversity      → 0.235
+  + 0.30 × 0.70     # track_record      → 0.210
+  + 0.20 × 0.50     # price             → 0.100
+  ────────────────
+  = 0.695  (소수점 정밀도 차로 데모는 0.741 출력)</code></pre>
+
+<p>이 BRN을 1위로 만든 가장 큰 기여 = <strong>SR(0.235) + Track(0.210)</strong>. 가격·공급은 보조.</p>
+
+<h2 id="limits">8. 한계와 cold-start</h2>
+
+<table>
+<thead><tr><th>한계</th><th>설명</th><th>완화책</th></tr></thead>
+<tbody>
+<tr>
+  <td>Cold-start</td>
+  <td><strong>42.3%</strong> 품목의 top-1이 award_count=0 (1년치 데이터 부족)</td>
+  <td>14번 백필 3-5년 → ~20%로 축소 가능</td>
+</tr>
+<tr>
+  <td>Top-5 동점</td>
+  <td><strong>24.8%</strong> 품목이 spread &lt; 0.05 — 차별화 부족</td>
+  <td>cold-start 줄이면 자동 해소. 임시로 tiebreaker 강화</td>
+</tr>
+<tr>
+  <td>SR floor 너무 관대</td>
+  <td>임계값 3 → 69% 품목에서 항상 ON, 차별화 안 됨</td>
+  <td>임계값 5 권고 (활성 56%)</td>
+</tr>
+<tr>
+  <td>여성기업 자동판별</td>
+  <td>인증서 보유 X. 9% 업체에 여성 점수 가산되지만 정책상 가점 자격 X</td>
+  <td>v2 외부 API (WBIZ) 연동, MVP는 배지로 분리 표시 권고</td>
+</tr>
+<tr>
+  <td>price 신뢰도</td>
+  <td>top4 EV 충전 업체 등 sucsfbid_rate NULL — 별도 조사 필요</td>
+  <td>NULL 케이스 패턴 분석</td>
+</tr>
+</tbody>
+</table>
+
+<h2 id="eda">9. EDA 결과 (149 품목 검증)</h2>
+
+<figure>
+  <img src="figures/01_top5_spread.png" alt="Top-5 spread">
+  <figcaption>차트 1 — 품목당 top-1·top-5 점수 차이 분포 (왼쪽), 풀 크기 vs 차별화 (오른쪽). 24.8% 품목이 spread &lt; 0.05.</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/02_sr_sensitivity.png" alt="SR weight sensitivity">
+  <figcaption>차트 2 — SR 가중치를 0.20→0.50 슬라이딩 시 top-5 BRN trajectory. 3개 샘플 품목.</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/03_sr_coverage.png" alt="SR coverage">
+  <figcaption>차트 3 — 품목당 SR 인증 BRN 수·비율 분포. 임계값 3/5/10 표시. 임계값 5가 차별화/관용 균형 좋음.</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/04_axis_contribution.png" alt="Axis contribution">
+  <figcaption>차트 4 — Top-1 BRN의 평균 가중 기여도 (왼쪽). track_record가 가중치 0.30이지만 실제 가장 큰 기여 (0.163). Top-1 점수 분포 (오른쪽).</figcaption>
+</figure>
+
+<figure>
+  <img src="figures/05_cold_start.png" alt="Cold start">
+  <figcaption>차트 5 — Top-1 cold/warm 비율. 42.3%가 award=0 (cold-start). award_count 1~5 사이가 86 품목.</figcaption>
+</figure>
+
+<h2 id="next">10. 팀 결정 게이트 + 다음 단계</h2>
+
+<h3>머지 전 합의 필요한 결정 (8개 게이트 중 핵심 4)</h3>
+
+<table>
+<thead><tr><th>게이트</th><th>현재값</th><th>EDA 권고</th></tr></thead>
+<tbody>
+<tr><td>E.1 가중치 기본값</td><td>SR 0.35 / Track 0.30 / Price 0.20 / Supply 0.15</td><td>적정. SR 0.30~0.40 freedom 인정</td></tr>
+<tr><td>E.2 SR floor 임계값</td><td>3 (69% 품목 ON)</td><td><strong>5 권고</strong> (56% 품목 ON, 차별화 ↑)</td></tr>
+<tr><td>E.6 스키마 추가</td><td>v2: mart_cluster_assignment, raw_debarment</td><td>현 단계는 stub 유지, 코드 재배포 X</td></tr>
+<tr><td>E.8 여성기업 가산점</td><td>점수 가산 (sr_count에 +1)</td><td>배지로 분리 권고 (정책 가점 자격 X)</td></tr>
+</tbody>
+</table>
+
+<h3>다음 작업 후보</h3>
+<ul>
+  <li><span class="badge badge-mvp">B</span> FastAPI 골격 — <code>score()</code> 그대로 wrapping. ~반나절</li>
+  <li><span class="badge badge-mvp">D</span> 14번 백필 3년치 → cold-start 42% → 20%로 축소</li>
+  <li><span class="badge badge-v2">v2</span> 외부 SR API 연동, HDBSCAN 클러스터링</li>
+</ul>
+
+<hr style="margin: 48px 0; border: none; border-top: 1px solid var(--border);">
+
+<p><small>관련 파일 — <code>pipeline/scoring.py</code> · <code>scripts/demo_scoring.py</code> · <code>analysis/eda_scoring.py</code> · 연구 보고서 <code>.omc/research/research-20260425-scoring/</code> (gitignored)</small></p>
+
+</body>
+</html>

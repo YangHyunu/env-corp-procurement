@@ -58,7 +58,8 @@
 | 프론트엔드 | **React + Vite** (shadcn/ui + Recharts 추정) |
 | 시각화(노트북) | matplotlib, plotly |
 
-> 새 라이브러리 추가는 **확인 사항** (4. 작업 방식 참조)
+> **이 표 외 라이브러리는 추가 시 반드시 사용자 확인** (섹션 9 참조)
+> "당연히 쓸 거 같으니까" 도 금지 — 모든 신규 의존성은 명시적 합의 필요
 
 ---
 
@@ -135,57 +136,54 @@ OMC가 자동으로 진행하더라도, CLAUDE.md 4번에 명시된 "확인 필�
 
 ---
 
-## 5. 폴더 구조 (단계별 성장)
-
-빈 폴더를 미리 만들지 않습니다. **필요할 때 생성**.
-
-### 현재 셋업 (1단계)
+## 5. 폴더 구조 (현재)
 
 ```
 project_root/
-├── CLAUDE.md                 ← 이 파일 (에이전트 첫 진입점)
-├── README.md                 ← 사람용 가이드
-├── .env.example              ← 환경변수 템플릿
-├── .env                      ← 실제 키 (gitignore)
-├── .gitignore
-├── pyproject.toml            ← uv 기반 의존성 정의
-├── .python-version           ← Python 3.12 고정
+├── CLAUDE.md                  ← 이 파일 (에이전트 첫 진입점)
+├── README.md
+├── .env.example / .env / .gitignore
+├── pyproject.toml             ← uv 기반 의존성 정의
+├── .python-version            ← Python 3.12 고정
 │
-├── docs/                     ← 레퍼런스 문서 (에이전트가 자주 참조)
-│   ├── _common.md            ← G2B API 공통 규칙
-│   ├── api/g2b/
-│   │   ├── getBidPblancListInfoThngPPSSrch.md   (14번)
-│   │   ├── getScsbidListSttusThng.md            (1번)
-│   │   ├── getOpengResultListInfoThng.md        (5번)
-│   │   └── getOpengResultListInfoThngPreparPcDetail.md (9번)
-│   └── datasets/
-│       └── dataset_procurement_corp.md          (조달업체 CSV)
+├── api/                       ← FastAPI
+│   ├── main.py                (/api/items, /api/recommend, /api/company, /api/kpi)
+│   └── schemas.py
 │
-├── pipeline/                 ← 수집·정제 공통 모듈
-│   ├── __init__.py
-│   ├── g2b_common.py
-│   └── procurement_corp.py
+├── frontend/                  ← React+Vite+shadcn
+│   └── src/{App.tsx, components/, lib/}
+│
+├── app/                       ← streamlit (deprecated, 정리 예정)
+│
+├── pipeline/                  ← 수집 + 추천 로직
+│   ├── g2b_common.py / g2b_*.py    (14/1/5/9번 수집)
+│   ├── procurement_corp.py
+│   ├── scoring.py             (v1 룰베이스 — 점진적 deprecate)
+│   ├── item_keywords.py       (8개 키워드 → prefix4 + name_regex)
+│   ├── ranker.py              (v2 Ranker Protocol — RuleRanker / 향후 LGBMRanker)
+│   └── recommend_v2.py        (v2 사전탐색 오케스트레이션)
+│
+├── scripts/                   ← 학습/적재/마트빌드 진입점
+│   ├── ingest_*.py
+│   ├── build_features.py / build_stg.py
+│   ├── train_baseline.py      (LGBM Classifier)
+│   └── train_ranker.py        (LGBM Ranker)
 │
 ├── sql/
-│   └── init.sql              ← PostgreSQL 스키마
-│
+├── artifacts/                 ← 학습 산출물 (lgbm_*.txt, metrics.json, feature_importance.csv)
+├── docs/                      ← G2B API 명세 + 데이터셋 문서
+│   ├── _common.md
+│   ├── api/g2b/{14/1/5/9번}.md
+│   └── datasets/
 ├── analysis/
-│   └── notebooks/            ← 탐색용 *.ipynb 자리
-│
-└── data/                     ← 로컬 데이터 (gitignore)
-    └── raw/
+│   ├── notebooks/
+│   └── *.html                 ← 분석 보고서, 목업 (dashboard_mockup.html 등)
+└── data/raw/                  ← 로컬 raw (gitignore)
 ```
 
-### 향후 단계 (이때 비로소 폴더 추가)
-
-| 단계 | 추가할 폴더 | 추가 시점 |
-|---|---|---|
-| 2단계 | `airflow/dags/` | 수집 스크립트 동작 검증 완료 후 |
-| 3단계 | `api/` (FastAPI) | mart 테이블 빌드 완료 후 |
-| 4단계 | `frontend/` (Vite+React) | API 엔드포인트 안정화 후 |
-| 부수 | `analysis/reports/` | 분석 결과물이 생기면 |
-
-> 지금 시점에 `api/`·`frontend/`·`airflow/`를 미리 만들지 마세요. **빈 폴더는 에이전트에게 "여기 뭔가 채워야 한다"는 잘못된 신호**가 됩니다.
+### 향후 (Phase 2~3)
+- `airflow/dags/` — 수집 자동화 본격화 시
+- 클라우드 배포 스크립트 — VM 이전 시
 
 ---
 
@@ -280,33 +278,226 @@ uv run python scripts/check_g2b_api.py
 - **`bidNtceNo` 명세 size(11/40)대로 잘라서 처리** — 실제 13자리, 명세 신뢰 금지
 - **여성기업인증여부=Y를 "인증서 보유"로 해석** — 단순 자동 판별
 - **`opengCorpInfo`를 단순 `split("^")`** — 단일/다수/협상 3 케이스 분기 (`parse_openg_corp_info` 사용)
-- **새 라이브러리 임의 추가** — `uv add <패키지>` (또는 `pyproject.toml` 수정) + 사용자 확인. **`pip install`로 직접 설치 금지** (pyproject.toml과 어긋남)
+- **새 라이브러리 임의 추가 절대 금지**
+  - 사전 합의된 스택(섹션 3) 외 패키지는 코드 작성 전 무조건 사용자 확인
+  - `pip install` / `pip3 install` 금지 — pyproject.toml과 어긋남
+  - `uv add`도 사용자 확인 후에만 실행
+  - "당연히 쓸 거 같으니까" 추가 X — 모든 신규 의존성은 명시적 합의 필요
+  - Transitive 의존도 주의 — 한 패키지가 무거운 sub-dependencies 끌어오면 그것도 보고
+  - 예외 없음 (분석/시각화/유틸 등 모든 카테고리 동일)
 - **PostgreSQL 스키마 임의 변경** — 마이그레이션 + 사용자 확인
+- **8개 키워드 외 자연어를 prefix4로 free-text 매핑 시도 금지** — 잘못된 BRN 풀 반환 위험. 매핑은 `pipeline/item_keywords.py` 사전에만 의존
+- **calibration 안 된 ML probability를 사용자에게 raw로 노출 금지** — 0.92 같은 숫자는 의미 없고 오해 유발. 운영 카드엔 등급(강추/추천/검토) 또는 순위만
+- **공무원 사용자에게 데이터 ingest 트리거 권한 부여 금지** — 권한·책임 분리 원칙. 신선화는 운영팀 책임. 사용자 화면엔 "데이터 기준일" 표기만
 - **MVP 단계에서 SR 외부 API 손대기** — v2로 미뤄둠 (현재는 조달업체 CSV의 1차 분류만 사용)
 
 ---
 
-## 10. 현재 진행 상황 (MVP 단계)
+## 10. 진행 상황 (2026-05-06)
 
 ### 완료
-- [x] G2B API 4개 명세 분석 (`docs/api/g2b/`)
-- [x] 조달업체 CSV 분석 (`docs/datasets/`)
-- [x] 공통 규칙 정의 (`docs/_common.md`)
-- [x] `pipeline/g2b_common.py` 구현 (BRN 정규화, 페이징, 재시도)
-- [x] `pipeline/procurement_corp.py` 구현 (CSV 로딩, 정규화)
-- [x] 환경공단 dminsttCd 10개 실측 확정
+- [x] G2B API 4개 (14/1/5/9번) 수집 + raw 적재
+- [x] PostgreSQL 스키마 (`sql/init.sql`, `sql/2026-05-05_*.sql`)
+- [x] stg_* / mart_* 마트 빌드 (`build_stg.py`)
+- [x] mart_features_at_bid (PIT 피처) — 343,019 rows
+- [x] LGBM Classifier 학습 (prefix_warm pool, AUC 0.858, HR@5 41%, SR@5 8.3%)
+- [x] LGBM Ranker 비교 학습 (lambdarank)
+- [x] FastAPI v1 (`/api/items`, `/api/recommend`, `/api/company`, `/api/kpi`)
+- [x] React 대시보드 v0.1 (item_code 단위)
+- [x] 사전탐색 모드 v2 목업 (`analysis/dashboard_mockup.html`)
+- [x] `pipeline/item_keywords.py` (8개 키워드 → prefix4 + name_regex)
 
-### 진행 예정 (MVP 한 사이클)
-- [ ] PostgreSQL 스키마 (`sql/init.sql`)
-- [ ] 14번 수집 → 환경공단 공고 적재
-- [ ] 1번 수집 → BRN 추출
-- [ ] 조달업체 CSV 적재 → `mart_company_master`
-- [ ] 낙찰자 BRN ↔ CSV left join 검증
-- [ ] FastAPI 기본 엔드포인트 (`/api/items`, `/api/recommend`)
-- [ ] React 대시보드 프로토타입
+### 진행 중 (사전탐색 모드 — 룰베이스 (A))
+- [ ] `pipeline/ranker.py` — Ranker Protocol + RuleRanker (Stage 2 swap point)
+- [ ] `pipeline/recommend_v2.py` — retrieve(Stage 1) → rank(Stage 2) → enrich
+- [ ] `api/main.py` 엔드포인트 (`/api/v2/recommend`, `/api/v2/keywords`, `/api/v2/meta`)
+- [ ] `api/schemas.py` v2 스키마
+- [ ] React v2 레이아웃 (입력 폼 + KPI + 카드 6항목 + 시각화 2개)
+- [ ] 데이터 기준일 표기 (헤더)
 
-### v2 (MVP 이후)
-- 외부 SR API 연동 (인증서 유효성 보강)
-- 부정당제재 정보
-- 클러스터링 모델 튜닝
-- 발주 의사결정 엔진 본격화
+### 향후 (Phase 2 / v3)
+- (B) 추천시스템 본격화 — Stage 2를 LGBM 으로 교체 (synthetic bid)
+- Stage 1 정교화 — AutoEncoder/Two-Tower BRN 임베딩
+- 부정당제재 데이터 소스 확보
+- 자동화 Phase 2 (클라우드 VM + crontab)
+- streamlit `app/` 정리 (제거 또는 어드민 격리)
+- 키워드 free-text 매핑 (8개 제약 해제)
+
+---
+
+## 11. 운영 추천 — 사전탐색 모드 스펙
+
+### 목적
+공고 발주 **전** 담당 공무원이 품목·정책 필터·예산을 입력하면 후보 BRN top-K 를 받는다.
+
+### 입력
+- 품목 (자연어 키워드 8개) → `pipeline/item_keywords.py` 의 `KEYWORD_FILTERS` dict 매핑
+  - 하수처리용 펌프 / 슬러지 탈수기 / 소각로 내화벽돌 / 바이오가스 발전기 /
+    수질측정센서 / 대기오염 측정장비 / 폐수처리약품 / 활성탄 필터
+- 정책 필터 0~3개 (사회적기업 / 여성기업 / 장애인기업) — hard filter
+- 예산 (백만원 단위)
+
+### 키워드 매핑 정책 (다)
+- 각 키워드 = `(prefix4_list, name_regex)` 쌍
+- 4710 같이 광범위한 prefix4 는 `name_regex` 로 disambiguate (예: 활성탄 vs 슬러지탈수기)
+- 매핑 위치: `pipeline/item_keywords.py` (Python dict 하드코딩)
+- 갱신: 매핑 수정 = 코드 수정 + 배포 (분기 1회 검토)
+- 8개 외 자유입력은 v3 로 미룸
+
+### 아키텍처 — Stage 분리 (확장 포인트)
+운영은 단일 함수처럼 동작하지만 내부적으로 Two-Stage 추천 구조:
+
+```
+Stage 1 (Retrieve)  →  Stage 2 (Rank)  →  Enrich
+키워드+필터로            후보별 점수            카드 정보 채우기
+후보 풀 좁히기            (현재 룰베이스)        (예상가/리스크/전례/시각화)
+```
+
+`pipeline/ranker.py` 의 `Ranker` Protocol 인터페이스로 Stage 2 교체 가능:
+- 현재: `RuleRanker` (4축 가중합)
+- 향후 (B): `LGBMRanker` (synthetic bid → predict_proba) — 한 줄 swap
+
+### 출력 (BRN별 카드)
+| 항목 | 산출 방식 |
+|---|---|
+| 예상 가격 (점) | `예산 × BRN 평균 낙찰률`. fallback: 시장 평균 (해당 prefix4) |
+| 예상 가격 (구간) | `예산 × BRN 낙찰률 [Q25, Q75]` (n≥3 일 때만 표시) |
+| 가격 안정성 | BRN 낙찰률 표준편차 — 낮음(<2pp) / 보통 / 높음(>5pp) |
+| 시장 평균 대비 | `(BRN 평균 − 시장 평균)` — "시장보다 +1.1pp 비쌈" |
+| 추천 근거 | 룰베이스 reason 템플릿 (낙찰 이력 + 정책 + 권역) |
+| 리스크 신호 | 1순위 탈락 이력 (stg_opening_result + stg_award join) + 활동중단 |
+| 공급 안정성 | 환경공단 누적 / 최근 1년 / G2B 등록기간 / 제조업 여부 |
+| 최근 낙찰 이력 | stg_award TOP 5 |
+| 유사 발주 사례 | 같은 prefix4 + 비슷한 예산 발주에서 누가 낙찰됐나 (전례) |
+| 시각화 | 해당 BRN 의 낙찰가 분포 / 낙찰률 분포 (히스토그램) |
+
+### 리스크 등급 (4단계)
+| 등급 | 조건 |
+|---|---|
+| 안전 | top1≥3 AND lost=0 |
+| 양호 | lost≤2 AND ratio<30% |
+| 주의 | lost≥3 OR ratio≥30% OR 최근1년 lost≥2 |
+| 미확인 | top1=0 (활동 부족) |
+
+활동중단 레드플래그: 최근 24개월 무낙찰 BRN → "활동 중단 가능성" 경고
+
+### KPI 카드 (의사결정 지원)
+- 후보 BRN 수 (시장 깊이: 등록 / 환경공단 활동)
+- SR 인증 후보 비율
+- 평균 예상 가격
+- 공급 위험도
+- **계약방식 권장** — 후보 풀 크기 → 1: 수의계약 / 2~5: 제한경쟁 / 6+: 일반경쟁
+
+### 엣지 케이스
+- 후보 0건 (필터로 다 제외) → 응답에 "필터 완화 권유" 메시지
+- 후보 1건 (단독공급) → 응답에 "단독공급 — 가격경쟁 어려움" 경고
+- 키워드 매핑 실패 → 400 에러 + "8개 키워드 중 선택"
+
+### 추천 모드
+- **(A) 룰베이스 (현재)**: `pipeline/ranker.RuleRanker` — 4축 가중합
+- **(B) LGBM (향후)**: synthetic bid 기반 `LGBMRanker` swap. 응답에 `ml_score` 필드 채워짐 (현재 None)
+
+### 미구현 / 데이터 부재
+- 부정당제재 이력 (API 미확보 → 1순위 탈락 이력 + 활동중단으로 대체)
+- 진짜 응찰업체 경쟁률 (4개 API 모두 부재 → 시장 깊이 KPI 로 대체)
+
+### 응답 스키마 (v2)
+```python
+RecommendV2Response:
+  item_keyword: str
+  matched_prefix4: list[str]
+  cutoff_date: str
+
+  kpi: {pool_size, market_depth, sr_count, sr_pct, avg_price, supply_risk, contract_recommend}
+  compliance: {sr_obligation_met, sr_in_top5}
+  recommendations: [
+    {
+      rank, brn, corp_name, tier (A/B/C),
+      badges: [중소, 부산, 여성기업],
+      summary_stats, expected_price, risk, supply_stability,
+      recent_awards, precedents, charts,
+      rule_score, ml_score: None, score_used: "rule",
+      reason
+    }
+  ]
+  meta: {weights_applied, data_freshness_days, ...}
+```
+
+---
+
+## 12. 데이터 운영 모델
+
+### 원칙: 공무원은 ingest 를 운영하지 않는다
+- 데이터 수집/갱신은 **개발·운영팀 책임**
+- 공무원 사용자는 웹 대시보드만 사용
+- 대시보드는 "데이터 기준일" 한 줄만 노출 (예: "기준일 2026-04-29")
+
+### 갱신 주기: 주 1회 권장
+환경공단 발주 빈도 = 연 612건 ≈ 일 1.7건. 일별 갱신은 운영 부담 ↑ 효용 ↓.
+**주 1회 (월요일 새벽 03:00 KST)** 면 의사결정 품질에 영향 거의 없음.
+
+### Raw 적재 (G2B API) — 주간 배치
+| API | 호출 윈도 | 의존 | 비고 |
+|---|---|---|---|
+| 14번 입찰공고 | 지난 14일 (backfill 7일 + 신규 7일) | — | 환경공단 10 dminstt 필터 |
+| 1번 낙찰자 | 지난 30일 (늦게 들어오는 낙찰 캐치) | 14번 후 | bidNtceNo 단위 |
+| 5번 개찰결과 | 지난 30일 | 14번 후 | winner_brn 추출 |
+| 9번 복수예가 | 5번 winner_brn 있는 공고만 | **5번 후 (순차)** | 쿼터 절약 |
+
+### Mart 빌드 (Raw 직후)
+| 테이블 | 주기 | 모드 |
+|---|---|---|
+| stg_bid_notice / stg_award / stg_opening_result | 주 1회 | full rebuild from raw |
+| mart_company_master / mart_company_sr | 분기 1회 (CSV 갱신 시) + 신규 BRN incremental upsert | |
+| mart_item_supply | 주 1회 | full rebuild |
+| mart_features_at_bid | 월 1회 (LGBM 학습 직전) | 룰베이스 운영엔 불필요 |
+
+### 운영 추천 (사전탐색)이 사용하는 테이블
+- `mart_item_supply` + `mart_company_master` + `mart_company_sr` (Stage 1/2 룰베이스)
+- `stg_award` (예상가 낙찰률 분포, 최근 낙찰 이력, 시각화)
+- `stg_opening_result + stg_award` direct join (1순위 탈락 이력)
+- `stg_bid_notice` (품목명 매핑, 유사 발주 사례)
+- → `mart_features_at_bid` 불필요 (LGBM 학습/inference 시점에만)
+
+### 모델
+| 산출물 | 주기 | 트리거 |
+|---|---|---|
+| LGBM 학습 (lgbm_baseline.txt) | 월 1회 또는 데이터 +20% 시 | 수동 — `uv run python scripts/train_baseline.py` |
+| 룰베이스 가중치 (`ranker.RuleRanker` weights) | 분기 검토 | 수동 |
+
+### 자동화 단계
+**Phase 1 (현재 PoC) — 로컬 cron / launchd**
+- 운영팀 macOS의 launchd 또는 cron 으로 주 1회 ingest+mart 실행
+- DB 는 로컬 PostgreSQL
+- 단점: 운영자 PC 꺼지면 멈춤 (시범 운영 동안만 OK)
+
+**Phase 2 (시범사업) — 클라우드 VM**
+- 작은 EC2/Lightsail (월 5~10$) + crontab + 같은 인스턴스에 PostgreSQL
+- 공무원은 외부 URL 로 대시보드 접속
+- 운영팀이 DB/cron 관리
+
+**Phase 3 (정식 도입) — 환경공단 내부 인프라**
+- 환경공단 IT 인프라에 배포 + Airflow (Dataset 트리거 + Dynamic Task Mapping)
+- 공무원 사내망에서만 접속
+
+### "지금 갱신" 같은 사용자 트리거 — 만들지 않음
+- 공무원이 ingest 트리거 = 권한·책임 떠넘기기
+- 데이터 신선도가 의사결정에 critical 하지 않음 (주 1회로 충분)
+- 필요 시 **운영팀 측 어드민 페이지**로 분리 (사용자 화면 X)
+
+### 사용자 화면 표기
+- 헤더 또는 KPI 영역에 1줄: "데이터 기준일: 2026-04-29 (4일 전)"
+- 7일 이상 지나면 노란 경고 "데이터 갱신 지연"
+
+### `/api/v2/meta` 엔드포인트
+```json
+{
+  "data_cutoff": "2026-04-29T03:00:00+09:00",
+  "freshness_days": 6,
+  "stale_warning": false,
+  "sources": {
+    "stg_award": "2026-04-29",
+    "mart_company_master": "2026-04-01"
+  }
+}
+```
