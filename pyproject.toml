@@ -32,11 +32,16 @@ ml = [
     "scikit-learn>=1.4",
     "umap-learn>=0.5",
     "hdbscan>=0.8",
+    "lightgbm>=4.5",
 ]
 api = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
     "pydantic>=2.5",
+]
+app = [
+    "streamlit>=1.40",
+    "plotly>=5.18",
 ]
 # airflow는 의존성이 무거워 별도 환경에서 운영 권장
 # airflow = ["apache-airflow>=2.8"]
