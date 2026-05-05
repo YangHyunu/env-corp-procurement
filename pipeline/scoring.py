@@ -1,18 +1,16 @@
 """
-scoring.py — MVP supplier recommendation scoring (가중합 + 백분위 정규화).
+scoring.py — v1 supplier recommendation entry point.
+
+Axis math, composite weighted sum, and SR soft-floor demote live in
+`pipeline.ranker.RuleRanker` (single source of truth). This module owns:
+
+  - POOL_SQL fetch (item_code → BRN pool)
+  - SrFilter hard gates
+  - Radar-display stubs (risk_free=1.0, cluster_fit=0.5)
+  - Recommendation dataclass + reason templating
+  - Tiebreaker sort (composite > sr_count > award_count > tenure)
 
 설계 근거: .omc/research/research-20260425-scoring/stages/stage-4.md
-공식: 4 score dims (supply_stability / sr_diversity / track_record / price_competitiveness)
-      + 5 radar axes (위 4개 + risk_free 스텁 + cluster_fit 스텁)
-
-알고리즘:
-  1. fetch_pool: mart_item_supply ∩ mart_company_sr ∩ mart_company_master @ item_code
-  2. hard gates (sr_filter)
-  3. axis raw scores ∈ [0, 1]
-  4. composite = Σ w_i · axis_i (4 active dims)
-  5. SR soft floor: n_sr_certified ≥ 3 인 경우 SR=0을 -1.0 demote
-  6. tiebreaker: composite > sr_count > award_count > tenure
-  7. reason 템플릿
 """
 from __future__ import annotations
 
@@ -21,11 +19,19 @@ import os
 from dataclasses import dataclass, field
 from typing import Any
 
-import numpy as np
 import pandas as pd
 import psycopg2
 import psycopg2.extras
 from dotenv import find_dotenv, load_dotenv
+
+from pipeline.ranker import (  # re-export DEFAULT_WEIGHTS + _validate_weights
+    DEFAULT_WEIGHTS,
+    RuleRanker,
+    _validate_weights,
+)
+
+__all__ = ["DEFAULT_WEIGHTS", "RuleRanker", "_validate_weights",
+           "SrFilter", "Recommendation", "ScoreResult", "score"]
 
 load_dotenv(find_dotenv(usecwd=True))
 DEFAULT_DSN = os.environ.get("DATABASE_URL", "postgresql:///eco")
@@ -33,13 +39,11 @@ DEFAULT_DSN = os.environ.get("DATABASE_URL", "postgresql:///eco")
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_WEIGHTS: dict[str, float] = {
-    "sr_diversity":          0.35,
-    "track_record":          0.30,
-    "price_competitiveness": 0.20,
-    "supply_stability":      0.15,
-}
-SR_LEGAL_FLOOR = 0.20  # 사회적 가치 우선구매 촉진법 제7조
+# RuleRanker requires these candidate keys (see pipeline/ranker.py module docstring)
+_RANKER_INPUT_KEYS = (
+    "brn", "sr_count", "female_ceo_flag", "disabled_corp_flag", "social_corp_flag",
+    "award_count", "award_total_amt", "avg_bid_rate",
+)
 
 
 @dataclass
@@ -96,16 +100,6 @@ WHERE mis.dtil_prdct_clsfc_no = %s
 """
 
 
-def _validate_weights(weights: dict[str, float]) -> None:
-    s = sum(weights.values())
-    if abs(s - 1.0) > 1e-3:
-        raise ValueError(f"weights must sum to 1.0 (got {s:.4f})")
-    if weights.get("sr_diversity", 0.0) < SR_LEGAL_FLOOR - 1e-3:
-        raise ValueError(
-            f"sr_diversity weight must be ≥ {SR_LEGAL_FLOOR} (legal floor)"
-        )
-
-
 def _fetch_pool(item_code: str, dsn: str) -> pd.DataFrame:
     with psycopg2.connect(dsn) as conn:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -125,64 +119,23 @@ def _apply_sr_filter(pool: pd.DataFrame, f: SrFilter) -> pd.DataFrame:
     return pool
 
 
-def _compute_axes(pool: pd.DataFrame) -> pd.DataFrame:
-    p = pool.copy()
-    n = len(p)
+def _apply_ranker(pool: pd.DataFrame, weights: dict[str, float]) -> pd.DataFrame:
+    """Delegate axis math + composite + SR-floor to RuleRanker, merge back into df."""
+    candidates = pool[list(_RANKER_INPUT_KEYS)].to_dict("records")
+    scored = RuleRanker(weights).score(candidates)
 
-    # Axis 1: supply_stability — rank within pool by award_count DESC
-    p["rank_award_count"] = p["award_count"].rank(method="min", ascending=False)
-    p["axis_supply_stability"] = (n - p["rank_award_count"] + 1) / n
-    p.loc[p["award_count"] == 0, "axis_supply_stability"] = 0.0
+    out = pool.copy().reset_index(drop=True)
+    out["composite_score"] = [s["rule_score"] for s in scored]
+    out["is_sr_demoted"]   = [s["is_sr_demoted"] for s in scored]
+    out["axis_supply_stability"]      = [s["axes"]["supply_stability"] for s in scored]
+    out["axis_sr_diversity"]          = [s["axes"]["sr_diversity"] for s in scored]
+    out["axis_track_record"]          = [s["axes"]["track_record"] for s in scored]
+    out["axis_price_competitiveness"] = [s["axes"]["price_competitiveness"] for s in scored]
 
-    # Axis 2: sr_diversity
-    p["axis_sr_diversity"] = p["sr_count"].clip(0, 3).astype(float) / 3.0
-
-    # Axis 3: track_record (count + bid_rate)
-    max_count = max(p["award_count"].max() or 1, 1)
-    p["norm_count"] = p["award_count"].astype(float) / max_count
-    p["norm_bid_rate"] = p["avg_bid_rate"].fillna(0.0).astype(float) / 100.0
-    rate_weight = p["avg_bid_rate"].notna().astype(float)
-    p["axis_track_record"] = (
-        0.6 * p["norm_count"] + 0.4 * p["norm_bid_rate"] * rate_weight
-    ).clip(0.0, 1.0)
-
-    # Axis 4 (radar stub): risk_free
-    p["axis_risk_free"] = 1.0
-    # Axis 5 (radar stub): cluster_fit
-    p["axis_cluster_fit"] = 0.5
-
-    # Score-only dim: price_competitiveness (inverse percentile of unit price)
-    p["unit_price"] = (
-        p["award_total_amt"].astype(float) / p["award_count"].replace(0, np.nan)
-    )
-    if p["unit_price"].notna().sum() >= 3:
-        p["axis_price_competitiveness"] = (
-            1.0 - p["unit_price"].rank(method="min", pct=True)
-        ).fillna(0.5)
-    else:
-        p["axis_price_competitiveness"] = 0.5
-
-    return p
-
-
-def _composite(p: pd.DataFrame, weights: dict[str, float]) -> pd.DataFrame:
-    p = p.copy()
-    p["composite_score"] = (
-        weights["supply_stability"]      * p["axis_supply_stability"]
-        + weights["sr_diversity"]        * p["axis_sr_diversity"]
-        + weights["track_record"]        * p["axis_track_record"]
-        + weights["price_competitiveness"] * p["axis_price_competitiveness"]
-    )
-
-    # SR soft floor: n_sr_certified ≥ 3 → demote SR=0
-    n_sr_cert = int((p["sr_count"] > 0).sum())
-    p["is_sr_demoted"] = False
-    if n_sr_cert >= 3:
-        demote_mask = p["sr_count"] == 0
-        p.loc[demote_mask, "composite_score"] -= 1.0
-        p.loc[demote_mask, "is_sr_demoted"] = True
-
-    return p
+    # Radar-display stubs (v1 display only — not part of RuleRanker)
+    out["axis_risk_free"]   = 1.0
+    out["axis_cluster_fit"] = 0.5
+    return out
 
 
 def _build_reason(row: pd.Series) -> str:
@@ -228,9 +181,12 @@ def _to_recommendation(rank: int, row: pd.Series, weights: dict[str, float]) -> 
         "price_competitiveness": weights["price_competitiveness"] * float(row["axis_price_competitiveness"]),
     }
     sr_badges: list[str] = []
-    if row["female_ceo_flag"]:    sr_badges.append("여성기업(자동판별)")
-    if row["disabled_corp_flag"]: sr_badges.append("장애인기업")
-    if row["social_corp_flag"]:   sr_badges.append("사회적기업")
+    if row["female_ceo_flag"]:
+        sr_badges.append("여성기업(자동판별)")
+    if row["disabled_corp_flag"]:
+        sr_badges.append("장애인기업")
+    if row["social_corp_flag"]:
+        sr_badges.append("사회적기업")
 
     return Recommendation(
         rank=rank,
@@ -262,7 +218,9 @@ def score(
 ) -> ScoreResult:
     """Top-K 추천 + 메타. stage-4 spec 그대로."""
     weights = weights or DEFAULT_WEIGHTS
-    _validate_weights(weights)
+    # Validation happens inside RuleRanker; trigger early so an invalid weight
+    # vector raises before we hit the database.
+    RuleRanker(weights)
 
     pool = _fetch_pool(item_code, dsn)
     if pool.empty:
@@ -283,8 +241,7 @@ def score(
             meta={"warning": "SR 필터로 모든 후보 제외 — 필터 완화 필요"},
         )
 
-    pool = _compute_axes(pool)
-    pool = _composite(pool, weights)
+    pool = _apply_ranker(pool, weights)
 
     pool = pool.sort_values(
         by=["composite_score", "sr_count", "award_count", "g2b_registered_at"],

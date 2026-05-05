@@ -177,9 +177,12 @@ def company_detail(brn: str) -> CompanyDetail:
     h = head[0]
 
     sr_badges: list[str] = []
-    if h["female_ceo_flag"]:    sr_badges.append("여성기업(자동판별)")
-    if h["disabled_corp_flag"]: sr_badges.append("장애인기업")
-    if h["social_corp_flag"]:   sr_badges.append("사회적기업")
+    if h["female_ceo_flag"]:
+        sr_badges.append("여성기업(자동판별)")
+    if h["disabled_corp_flag"]:
+        sr_badges.append("장애인기업")
+    if h["social_corp_flag"]:
+        sr_badges.append("사회적기업")
 
     awards = _query("""
         SELECT a.bid_ntce_no,
@@ -270,7 +273,7 @@ def list_keywords() -> list[str]:
 def recommend_v2_endpoint(req: RecommendV2Request) -> RecommendV2Response:
     """사전탐색 추천 — 키워드 + 정책 필터 + 예산 → top-K BRN."""
     try:
-        result = recommend_v2(
+        return recommend_v2(
             RecommendV2DTO(
                 item_keyword=req.item_keyword,
                 budget_million_won=req.budget_million_won,
@@ -281,7 +284,6 @@ def recommend_v2_endpoint(req: RecommendV2Request) -> RecommendV2Response:
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return RecommendV2Response(**result)
 
 
 @app.get("/api/v2/meta", response_model=MetaResponse)

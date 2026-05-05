@@ -15,6 +15,8 @@ from typing import Any, Protocol
 import numpy as np
 import pandas as pd
 
+from pipeline.policy import SR_LEGAL_FLOOR_FRACTION
+
 
 DEFAULT_WEIGHTS: dict[str, float] = {
     "sr_diversity":          0.35,
@@ -22,7 +24,6 @@ DEFAULT_WEIGHTS: dict[str, float] = {
     "price_competitiveness": 0.20,
     "supply_stability":      0.15,
 }
-SR_LEGAL_FLOOR = 0.20  # 사회적 가치 우선구매 촉진법 제7조
 
 
 class Ranker(Protocol):
@@ -40,9 +41,9 @@ def _validate_weights(weights: dict[str, float]) -> None:
     s = sum(weights.values())
     if abs(s - 1.0) > 1e-3:
         raise ValueError(f"weights must sum to 1.0 (got {s:.4f})")
-    if weights.get("sr_diversity", 0.0) < SR_LEGAL_FLOOR - 1e-3:
+    if weights.get("sr_diversity", 0.0) < SR_LEGAL_FLOOR_FRACTION - 1e-3:
         raise ValueError(
-            f"sr_diversity weight must be ≥ {SR_LEGAL_FLOOR} (legal floor)"
+            f"sr_diversity weight must be ≥ {SR_LEGAL_FLOOR_FRACTION} (legal floor)"
         )
 
 

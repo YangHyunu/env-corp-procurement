@@ -5,9 +5,11 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from pipeline.policy import SR_LEGAL_FLOOR_FRACTION
+
 
 class WeightVector(BaseModel):
-    sr_diversity:          float = Field(ge=0.20, le=1.0)  # 법정 하한 0.20
+    sr_diversity:          float = Field(ge=SR_LEGAL_FLOOR_FRACTION, le=1.0)  # 법정 하한
     track_record:          float = Field(ge=0.0, le=1.0)
     price_competitiveness: float = Field(ge=0.0, le=1.0)
     supply_stability:      float = Field(ge=0.0, le=1.0)
