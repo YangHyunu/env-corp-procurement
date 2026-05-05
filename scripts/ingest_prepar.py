@@ -1,16 +1,15 @@
 """
-1번 API ingest — raw_g2b_award 적재.
+9번 API ingest — raw_g2b_prepar 적재.
 
-소스: raw_g2b_bid_notice의 distinct bidNtceNo (가장 최근 fetched_at 기준).
-호출 패턴: inqryDiv=4 + bidNtceNo (1:N 룩업, 보통 N=1).
+소스: stg_opening_result에서 rsrvtn_prce_file_yn='Y' 인 공고만 (= 9번 호출 가능).
+호출 패턴: inqryDiv=2 + bidNtceNo (한 응답에 15 row).
 
 사용:
-  uv run python scripts/ingest_award.py
-  uv run python scripts/ingest_award.py --limit 10        # 테스트
-  uv run python scripts/ingest_award.py --skip-empty      # totalCount=0 로깅 생략
+  uv run python scripts/ingest_prepar.py
+  uv run python scripts/ingest_prepar.py --limit 50    # 샘플
+  uv run python scripts/ingest_prepar.py --skip-empty
 
-DSN 우선순위:
-  --dsn 인자 > $DATABASE_URL > postgresql:///eco
+Resume: raw_g2b_prepar에 이미 있는 bid는 자동 스킵 (LEFT JOIN).
 """
 from __future__ import annotations
 
@@ -27,7 +26,7 @@ from dotenv import find_dotenv, load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from pipeline.g2b_award import extract_raw_row, iter_items_for_bid  # noqa: E402
+from pipeline.g2b_prepar import extract_raw_row, iter_items_for_bid  # noqa: E402
 from pipeline.g2b_common import G2BApiError, make_session  # noqa: E402
 
 load_dotenv(find_dotenv(usecwd=True))
@@ -38,53 +37,50 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
-logger = logging.getLogger("ingest_award")
+logger = logging.getLogger("ingest_prepar")
 
 
 SOURCE_SQL = """
-SELECT DISTINCT bn.bid_ntce_no
-FROM raw_g2b_bid_notice bn
-LEFT JOIN raw_g2b_award a USING (bid_ntce_no)
-WHERE a.bid_ntce_no IS NULL
-ORDER BY bn.bid_ntce_no
+SELECT DISTINCT o.bid_ntce_no
+FROM stg_opening_result o
+LEFT JOIN raw_g2b_prepar p USING (bid_ntce_no)
+WHERE o.rsrvtn_prce_file_yn = 'Y'
+  AND p.bid_ntce_no IS NULL
+ORDER BY o.bid_ntce_no
 """
 
-# raw_g2b_award PK = (fetched_at, bid_ntce_no, bid_ntce_ord, bid_clsfc_no, rbid_no)
-# fetched_at은 DEFAULT now() — 매 실행 새 스냅샷.
 UPSERT_SQL = """
-INSERT INTO raw_g2b_award
-    (bid_ntce_no, bid_ntce_ord, bid_clsfc_no, rbid_no, request_params, item_xml)
+INSERT INTO raw_g2b_prepar
+    (bid_ntce_no, bid_ntce_ord, bid_clsfc_no, rbid_no, prce_sno, request_params, item_xml)
 VALUES %s
-ON CONFLICT (fetched_at, bid_ntce_no, bid_ntce_ord, bid_clsfc_no, rbid_no) DO NOTHING
+ON CONFLICT (fetched_at, bid_ntce_no, bid_ntce_ord, bid_clsfc_no, rbid_no, prce_sno) DO NOTHING
 """
 
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--limit", type=int, default=None, help="bidNtceNo 처리 상한 (테스트용)")
+    p.add_argument("--limit", type=int, default=None, help="bidNtceNo 처리 상한")
     p.add_argument("--skip-empty", action="store_true", help="totalCount=0 로그 생략")
     p.add_argument("--dsn", default=DEFAULT_DSN)
-    p.add_argument("--page-size", type=int, default=999)
+    p.add_argument("--page-size", type=int, default=30)
     args = p.parse_args()
 
     with psycopg2.connect(args.dsn) as conn:
         with conn.cursor() as cur:
             cur.execute(SOURCE_SQL)
-            bids = [row[0] for row in cur.fetchall()]
+            bids = [r[0] for r in cur.fetchall()]
 
     if args.limit:
         bids = bids[: args.limit]
 
     if not bids:
-        logger.error("raw_g2b_bid_notice 비어있음. 14번 ingest 먼저.")
+        logger.error("처리할 bidNtceNo 없음 (5번에서 Y인 게 없거나 모두 처리됨)")
         return 1
 
     logger.info("총 %d개 bidNtceNo 처리 시작", len(bids))
 
     session = make_session()
-    hit = 0
-    miss = 0
-    inserted_total = 0
+    hit = miss = inserted_total = 0
 
     with psycopg2.connect(args.dsn) as conn:
         with conn.cursor() as cur:
@@ -96,18 +92,16 @@ def main() -> int:
                     ):
                         r = extract_raw_row(item, params)
                         if not all((r["bid_ntce_no"], r["bid_ntce_ord"],
-                                    r["bid_clsfc_no"], r["rbid_no"])):
+                                    r["bid_clsfc_no"], r["rbid_no"])) or r["prce_sno"] is None:
                             logger.warning(
-                                "PK 누락 row skip: no=%s pk=(%r,%r,%r,%r)",
+                                "PK 누락 row skip: no=%s pk=(%r,%r,%r,%r,sno=%r)",
                                 no, r["bid_ntce_no"], r["bid_ntce_ord"],
-                                r["bid_clsfc_no"], r["rbid_no"],
+                                r["bid_clsfc_no"], r["rbid_no"], r["prce_sno"],
                             )
                             continue
                         rows.append((
-                            r["bid_ntce_no"],
-                            r["bid_ntce_ord"],
-                            r["bid_clsfc_no"],
-                            r["rbid_no"],
+                            r["bid_ntce_no"], r["bid_ntce_ord"],
+                            r["bid_clsfc_no"], r["rbid_no"], r["prce_sno"],
                             psycopg2.extras.Json(r["request_params"]),
                             r["item_xml"],
                         ))
@@ -120,12 +114,11 @@ def main() -> int:
                     conn.commit()
                     hit += 1
                     inserted_total += len(rows)
-                    logger.info("[%d/%d] %s  awards=%d", i, len(bids), no, len(rows))
+                    logger.info("[%d/%d] %s  prces=%d", i, len(bids), no, len(rows))
                 else:
                     miss += 1
                     if not args.skip_empty:
-                        logger.info("[%d/%d] %s  awards=0 (개찰 미완료/유찰 추정)",
-                                    i, len(bids), no)
+                        logger.info("[%d/%d] %s  prces=0", i, len(bids), no)
 
                 time.sleep(0.1)
 

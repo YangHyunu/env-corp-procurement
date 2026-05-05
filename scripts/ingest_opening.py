@@ -1,16 +1,17 @@
 """
-1번 API ingest — raw_g2b_award 적재.
+5번 API ingest — raw_g2b_opening 적재.
 
-소스: raw_g2b_bid_notice의 distinct bidNtceNo (가장 최근 fetched_at 기준).
-호출 패턴: inqryDiv=4 + bidNtceNo (1:N 룩업, 보통 N=1).
+소스: raw_g2b_bid_notice의 distinct bidNtceNo (raw_g2b_opening에 미적재인 것).
+호출 패턴: inqryDiv=4 + bidNtceNo (1:N 룩업, 보통 N=1~수 건).
 
 사용:
-  uv run python scripts/ingest_award.py
-  uv run python scripts/ingest_award.py --limit 10        # 테스트
-  uv run python scripts/ingest_award.py --skip-empty      # totalCount=0 로깅 생략
+  uv run python scripts/ingest_opening.py
+  uv run python scripts/ingest_opening.py --limit 50    # 샘플 검증
+  uv run python scripts/ingest_opening.py --skip-empty  # totalCount=0 로깅 생략
 
-DSN 우선순위:
-  --dsn 인자 > $DATABASE_URL > postgresql:///eco
+DSN 우선순위: --dsn > $DATABASE_URL > postgresql:///eco
+
+Resume: SOURCE_SQL이 LEFT JOIN으로 raw_g2b_opening 미적재 bid만 선택.
 """
 from __future__ import annotations
 
@@ -27,7 +28,7 @@ from dotenv import find_dotenv, load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from pipeline.g2b_award import extract_raw_row, iter_items_for_bid  # noqa: E402
+from pipeline.g2b_opening import extract_raw_row, iter_items_for_bid  # noqa: E402
 from pipeline.g2b_common import G2BApiError, make_session  # noqa: E402
 
 load_dotenv(find_dotenv(usecwd=True))
@@ -38,21 +39,19 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
-logger = logging.getLogger("ingest_award")
+logger = logging.getLogger("ingest_opening")
 
 
 SOURCE_SQL = """
 SELECT DISTINCT bn.bid_ntce_no
 FROM raw_g2b_bid_notice bn
-LEFT JOIN raw_g2b_award a USING (bid_ntce_no)
-WHERE a.bid_ntce_no IS NULL
+LEFT JOIN raw_g2b_opening o USING (bid_ntce_no)
+WHERE o.bid_ntce_no IS NULL
 ORDER BY bn.bid_ntce_no
 """
 
-# raw_g2b_award PK = (fetched_at, bid_ntce_no, bid_ntce_ord, bid_clsfc_no, rbid_no)
-# fetched_at은 DEFAULT now() — 매 실행 새 스냅샷.
 UPSERT_SQL = """
-INSERT INTO raw_g2b_award
+INSERT INTO raw_g2b_opening
     (bid_ntce_no, bid_ntce_ord, bid_clsfc_no, rbid_no, request_params, item_xml)
 VALUES %s
 ON CONFLICT (fetched_at, bid_ntce_no, bid_ntce_ord, bid_clsfc_no, rbid_no) DO NOTHING
@@ -64,7 +63,7 @@ def main() -> int:
     p.add_argument("--limit", type=int, default=None, help="bidNtceNo 처리 상한 (테스트용)")
     p.add_argument("--skip-empty", action="store_true", help="totalCount=0 로그 생략")
     p.add_argument("--dsn", default=DEFAULT_DSN)
-    p.add_argument("--page-size", type=int, default=999)
+    p.add_argument("--page-size", type=int, default=100)
     args = p.parse_args()
 
     with psycopg2.connect(args.dsn) as conn:
@@ -76,7 +75,7 @@ def main() -> int:
         bids = bids[: args.limit]
 
     if not bids:
-        logger.error("raw_g2b_bid_notice 비어있음. 14번 ingest 먼저.")
+        logger.error("처리할 bidNtceNo 없음 (raw_g2b_bid_notice 비어있거나 모두 처리됨)")
         return 1
 
     logger.info("총 %d개 bidNtceNo 처리 시작", len(bids))
@@ -120,12 +119,11 @@ def main() -> int:
                     conn.commit()
                     hit += 1
                     inserted_total += len(rows)
-                    logger.info("[%d/%d] %s  awards=%d", i, len(bids), no, len(rows))
+                    logger.info("[%d/%d] %s  results=%d", i, len(bids), no, len(rows))
                 else:
                     miss += 1
                     if not args.skip_empty:
-                        logger.info("[%d/%d] %s  awards=0 (개찰 미완료/유찰 추정)",
-                                    i, len(bids), no)
+                        logger.info("[%d/%d] %s  results=0", i, len(bids), no)
 
                 time.sleep(0.1)
 
