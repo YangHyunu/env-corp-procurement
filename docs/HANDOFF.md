@@ -15,8 +15,11 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # uv 미설치 시
 uv sync                                            # .venv 자동 생성
 
 # 3. PostgreSQL 복원
+#    별도 공유받은 dump 파일을 프로젝트 내 data/dumps/ 에 두기
+mkdir -p data/dumps
+mv ~/Downloads/eco_2026_05_06.dump data/dumps/   # 다운로드 위치에 따라 조정
 createdb eco
-pg_restore --no-owner -d eco eco_dump_2026_05_06.dump   # dump 파일 별도 공유
+pg_restore --no-owner -d eco data/dumps/eco_2026_05_06.dump
 
 # 4. 환경변수
 cp .env.example .env
@@ -463,10 +466,21 @@ pg_dump eco -F c -f eco_dump_$(date +%Y_%m_%d).dump
 ```
 
 ### Restore (팀원 측)
+
+별도 공유받은 dump 파일을 프로젝트의 `data/dumps/` 에 두고 복원한다 (`data/` 는 gitignored).
+
 ```bash
+# 1. dump 파일 위치 (다운로드 위치에 따라 조정)
+mkdir -p data/dumps
+mv ~/Downloads/eco_2026_05_06.dump data/dumps/
+
+# 2. DB 생성 + 복원
 createdb eco
-pg_restore --no-owner -d eco eco_dump_2026_05_06.dump
-psql eco -c "SELECT COUNT(*) FROM mart_company_master;"  # 검증
+pg_restore --no-owner -d eco data/dumps/eco_2026_05_06.dump
+
+# 3. 검증
+psql eco -c "SELECT COUNT(*) FROM mart_company_master;"
+# → 65,000+ 행이 나오면 정상
 ```
 
 ### G2B 신규 적재 (선택 — 본인 키 보유 시)
