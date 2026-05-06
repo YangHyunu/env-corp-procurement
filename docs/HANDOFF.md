@@ -110,81 +110,294 @@ erDiagram
 
 ## 4. 피처 엔지니어링 — `mart_features_at_bid` 30 컬럼
 
-### 키 (PK + 라벨)
+### 4.0 핵심 개념
+
+**PIT (Point-In-Time)** — 각 공고에 대해 그 공고 시점(`cutoff_date = bid_ntce_dt` 게시일) **이전 데이터만 집계**. 미래 정보 누설 방지 (leakage prevention).
+
+```sql
+-- 잘못된 예 (leakage)
+SELECT COUNT(*) FROM stg_award WHERE bidwinnr_brn = 'X'
+-- → 미래 낙찰까지 포함되어 학습 시 답을 미리 본 셈
+
+-- 올바른 PIT 패턴
+LEFT JOIN LATERAL (
+    SELECT COUNT(*) FROM stg_award a
+    WHERE a.bidwinnr_brn = p.brn
+      AND a.fnl_sucsf_date < p.cutoff_date::date  -- ← 핵심
+) env_pit ON true
+```
+
+**Candidate Pool** (mart_features_at_bid 의 행 단위) — 모든 공고 × 모든 BRN 조합은 너무 큼. 3가지 풀 정책 선택:
+- `item` — 그 공고 품목(prefix4) 등록 BRN 전체
+- `warm_only` — 환경공단 활동 BRN ∩ 등록 (작지만 의미 있는 풀)
+- `prefix_warm` — 그 공고 prefix4 등록 ∩ warm 활동 (현재 채택, 균형)
+
+`scripts/build_features.py --pool prefix_warm` (default).
+
+---
+
+### 4.1 키 (PK + 라벨)
 | 컬럼 | 타입 | 설명 |
 |---|---|---|
 | bid_ntce_no, bid_ntce_ord, brn | str | (공고 × BRN) PK |
-| **is_winner** | bool | **타겟** — 이 BRN이 이 공고에서 최종 낙찰 |
-| participated_in_bid | bool | 응찰 여부 (1순위 또는 낙찰자) |
+| **is_winner** | bool | **타겟 (분류)** — 이 BRN이 이 공고에서 최종 낙찰 |
+| participated_in_bid | bool | 응찰 여부 (5번 1순위 또는 1번 낙찰자) — leakage 위험 컬럼 (분류 학습 시 drop) |
 
-### A. BRN 정적 (7)
+**라벨 정의 SQL:**
+```sql
+-- is_winner: 1번 (낙찰자) 매칭
+LEFT JOIN LATERAL (
+    SELECT a.bidwinnr_brn AS brn FROM stg_award a
+    WHERE a.bid_ntce_no = p.bid_ntce_no
+      AND a.bid_ntce_ord = p.bid_ntce_ord
+      AND a.bidwinnr_brn = p.brn
+) a_final ON true
+→ COALESCE(a_final.brn IS NOT NULL, false) AS is_winner
+
+-- participated_in_bid: 5번 (1순위) 매칭
+→ COALESCE(o_top1.brn IS NOT NULL, false) AS participated_in_bid
+```
+
+**분포 (실측, 학습 데이터 268k row):**
+- `is_winner = TRUE` 비율 ≈ 0.16% (449 winners)
+- `participated_in_bid = TRUE` 비율 ≈ 0.6%
+- → 극심한 class imbalance. LightGBM `scale_pos_weight=154` 자동 보정.
+
+---
+
+### 4.2 A. BRN 정적 피처 (7)
+
+| 컬럼 | 출처 | 가설 |
+|---|---|---|
+| `corp_size` | mart_company_master | 중소·중견·대기업. 환경공단 발주는 중소 우대 정책 有 |
+| `is_manufacturer` | mart_company_master | 자체 제조 BRN이 신뢰성 높음 (납품 안정성) |
+| `region_code` | mart_company_master (2자리 시도) | 발주청과 같은 권역이면 운송비/서비스 유리 |
+| `g2b_age_years` | mart_company_master.g2b_registered_at | `(cutoff_date - 등록일)/365.25`. 오래된 BRN = 신뢰성 |
+| `female_ceo_flag` | mart_company_sr | 여성기업 자동판별 (대표자 성별) |
+| `disabled_corp_flag` | mart_company_sr | 장애인기업 인증 |
+| `social_corp_flag` | mart_company_sr | 사회적기업 인증 |
+| `real_sr_flag` | derived | `disabled OR social` (실질SR — 자동판별 X) |
+
+**g2b_age_years 계산:**
+```sql
+EXTRACT(EPOCH FROM (p.cutoff_date - m.g2b_registered_at::timestamptz))
+  / (365.25 * 86400)
+```
+
+---
+
+### 4.3 B. BRN 환경공단 누적 PIT (6)
+
+> **가설**: 과거 환경공단 낙찰 이력이 풍부할수록 미래 낙찰 확률 ↑ (관성 효과)
+
+LATERAL 서브쿼리 패턴:
+```sql
+LEFT JOIN LATERAL (
+    SELECT
+        COUNT(*) AS cnt,
+        COALESCE(SUM(a.sucsfbid_amt), 0)::bigint AS amt,
+        AVG(a.sucsfbid_rate)::numeric(6,3) AS avg_rate,
+        COUNT(DISTINCT a.dminstt_cd) AS dminstt_cnt,
+        SUM(CASE WHEN a.fnl_sucsf_date >= (p.cutoff_date - INTERVAL '1 year')::date
+                 THEN 1 ELSE 0 END) AS recent_1y,
+        EXTRACT(DAY FROM (p.cutoff_date - MAX(a.fnl_sucsf_date)::timestamptz))::int
+            AS days_since
+    FROM stg_award a
+    WHERE a.bidwinnr_brn = p.brn
+      AND a.fnl_sucsf_date IS NOT NULL
+      AND a.fnl_sucsf_date < p.cutoff_date::date     -- ★ PIT 핵심
+) env_pit ON true
+```
+
+| 컬럼 | 의미 | 값 범위 (실측) |
+|---|---|---|
+| `env_award_count_pit` | 환경공단 누적 낙찰 건수 | 0 ~ 25, p50=0, p90=2 |
+| `env_award_amt_pit` | 누적 낙찰액 (KRW) | 0 ~ 수십억 |
+| `env_avg_rate_pit` | 평균 낙찰률 (%) | 70 ~ 100, p50=88 |
+| `env_dminstt_count_pit` | 거래한 환경공단 dminstt 수 | 0 ~ 10 (전국 권역 다양성) |
+| `env_recent_1y_count_pit` | 최근 1년 낙찰 건수 | 0 ~ 10, 활동 모멘텀 |
+| `days_since_last_award_pit` | 마지막 낙찰 후 경과일 | NULL (이력 없음) ~ 수년 |
+
+**LightGBM Top Features (학습 결과):** `env_award_count_pit`, `env_avg_rate_pit` 가 상위 5위 안에. → **이 그룹이 가장 영향력 큼.**
+
+---
+
+### 4.4 C. BRN 응찰 패턴 PIT (4) — 위험 시그널
+
+> **가설**: 5번에서 1순위였는데 1번에서 다른 BRN이 낙찰자 = 자격검사 탈락 / 시담 결렬. 이런 패턴 잦은 BRN은 미래에도 못 받을 가능성 ↑
+
+```sql
+LEFT JOIN LATERAL (
+    SELECT
+        COUNT(*) FILTER (WHERE final_brn IS NOT NULL OR final_brn IS NULL) AS top1_cnt,
+        COUNT(*) FILTER (WHERE final_brn IS NULL OR final_brn != p.brn) AS lost_cnt,
+        ...
+        SUM(CASE WHEN openg_dt >= (p.cutoff_date - INTERVAL '1 year')
+                 AND (final_brn IS NULL OR final_brn != p.brn) THEN 1 ELSE 0 END)
+            AS recent_lost
+    FROM stg_opening_result o
+    LEFT JOIN stg_award a USING (bid_ntce_no, bid_ntce_ord)
+    WHERE o.winner_brn = p.brn
+      AND o.openg_dt < p.cutoff_date     -- ★ PIT
+) bid_pit ON true
+```
+
+| 컬럼 | 의미 | 시그널 |
+|---|---|---|
+| `bid_top1_count_pit` | 1순위 누적 횟수 | 활발도 |
+| `bid_lost_count_pit` | 1순위였으나 최종낙찰 실패 | **위험** |
+| `bid_lost_ratio_pit` | lost / top1 | **0.3+ 면 검토 필요** |
+| `bid_recent_lost_count_pit` | 최근 1년 탈락 | 최신 위험 |
+
+**룰베이스 위험등급 임계값** (`pipeline/recommend_v2.py`):
+```python
+RISK_LOST_HARD: int = 3        # 누적 탈락 hard cap
+RISK_LOST_RATIO: float = 0.30  # 비율 hard cap
+RISK_RECENT_LOST: int = 2      # 최근 1년 hard cap
+RISK_TOP1_SAFE: int = 3        # 안전 등급 진입 최소 top1
+```
+
+---
+
+### 4.5 D. BRN × 품목 매칭 PIT (3) — 도메인 적합성
+
+> **가설**: BRN이 같은 품목군(prefix4)에서 자주 낙찰받으면 그 도메인 전문성 高
+
+```sql
+LEFT JOIN LATERAL (
+    SELECT COUNT(*) AS cnt,
+           AVG(a.sucsfbid_rate)::numeric(6,3) AS avg_rate
+    FROM stg_award a
+    JOIN stg_bid_notice b USING (bid_ntce_no, bid_ntce_ord)
+    WHERE a.bidwinnr_brn = p.brn
+      AND LEFT(b.dtil_prdct_clsfc_no, 4) = LEFT(p.item_code, 4)   -- 같은 prefix4
+      AND a.fnl_sucsf_date < p.cutoff_date::date
+) item_pit ON true
+```
+
 | 컬럼 | 의미 |
 |---|---|
-| corp_size | 중소/중견/대기업 |
-| is_manufacturer | 제조업 자체생산 여부 |
-| region_code | 시도 코드 (2자리) |
-| g2b_age_years | G2B 등록 연수 |
-| female_ceo_flag, disabled_corp_flag, social_corp_flag | SR 인증 |
-| real_sr_flag | 실질SR (장애인 OR 사회적) |
+| `brn_item_award_count_pit` | 같은 prefix4 누적 낙찰 |
+| `brn_item_avg_rate_pit` | 같은 prefix4 평균 낙찰률 |
+| `main_prdct_match` | BRN의 `main_dtil_prdct_cd` (조달업체 CSV) == 공고 품목 (10자리 일치) |
 
-### B. BRN 환경공단 누적 PIT (5)
-PIT = Point-In-Time. 각 공고의 `cutoff_date` (= 공고 게시일) 이전 데이터만 집계 → leakage 방지.
+**LightGBM Top Features**: `brn_item_award_count_pit` 가 1위. → 도메인 전문성이 가장 강력한 시그널.
 
-| 컬럼 | 의미 |
-|---|---|
-| env_award_count_pit | 환경공단 누적 낙찰 건수 |
-| env_award_amt_pit | 누적 낙찰액 |
-| env_avg_rate_pit | 평균 낙찰률 |
-| env_dminstt_count_pit | 거래한 환경공단 dminstt 수 (다양성) |
-| env_recent_1y_count_pit | 최근 1년 낙찰 건수 |
-| days_since_last_award_pit | 마지막 낙찰 후 경과일 |
+---
 
-### C. BRN 응찰 패턴 PIT (4) — 1순위 vs 최종 낙찰 차이 신호
-1순위인데 최종 낙찰 못 받으면 (자격 검사 탈락 / 시담 결렬) 위험 신호.
+### 4.6 E. BRN × 권역 PIT (1)
+
+```sql
+LEFT JOIN LATERAL (
+    SELECT COUNT(*) AS cnt FROM stg_award a
+    WHERE a.bidwinnr_brn = p.brn
+      AND a.dminstt_cd = p.dminstt_cd     -- 같은 발주청
+      AND a.fnl_sucsf_date < p.cutoff_date::date
+) dminstt_pit ON true
+```
 
 | 컬럼 | 의미 |
 |---|---|
-| bid_top1_count_pit | 1순위 누적 횟수 |
-| bid_lost_count_pit | 1순위였으나 최종낙찰 실패 횟수 |
-| bid_lost_ratio_pit | lost / top1 |
-| bid_recent_lost_count_pit | 최근 1년 탈락 |
+| `brn_dminstt_award_count_pit` | 그 발주청 직접 거래 누적 (관계 강도) |
 
-### D. BRN × 품목 매칭 PIT (3)
+---
+
+### 4.7 F. 공고 측 (7) — 컨텍스트
+
+PIT 불필요 (공고 자체 메타).
+
+| 컬럼 | 의미 | 결측 |
+|---|---|---|
+| `presmpt_prce` | 사정가격 (KRW) | 가능 |
+| `asign_bdgt_amt` | 배정예산 (KRW) | 가능 |
+| `cntrct_cncls_mthd_nm` | 계약방식 (일반/제한/수의/지명) | NOT NULL |
+| `bid_month` | 1~12 (계절성) | NOT NULL |
+| `bid_quarter` | 1~4 | NOT NULL |
+| `bid_dminstt_cd` | 발주청 (categorical, env_corp 10개 + env_domain 26개) | NOT NULL |
+| `bid_dtil_prdct_no` | 세부품명번호 (10자리) | 가능 |
+
+**LightGBM 처리**: `cntrct_cncls_mthd_nm`, `bid_dminstt_cd`, `bid_dtil_prdct_no` 는 high-cardinality categorical → `categorical_feature=` 인자로 전달.
+
+---
+
+### 4.8 G. 시장 구조 PIT (3)
+
+> **가설**: 그 품목 시장이 두꺼우면 경쟁 강해 낙찰 확률 ↓. 최근 미낙찰 많으면 진입 기회.
+
 | 컬럼 | 의미 |
 |---|---|
-| brn_item_award_count_pit | 같은 prefix4 누적 낙찰 |
-| brn_item_avg_rate_pit | 같은 prefix4 평균 낙찰률 |
-| main_prdct_match | BRN의 main_dtil_prdct == 공고 품목 |
+| `item_pool_density_pit` | 그 품목 등록 BRN 수 (시장 깊이) |
+| `item_recent_unmet_pit` | 최근 1년 미낙찰 (유찰) 비율 |
+| `item_top1_concentration_pit` | 상위 BRN 집중도 (HHI 유사) |
 
-### E. BRN × 권역 PIT (1)
+---
+
+### 4.9 메타 컬럼
+
 | 컬럼 | 의미 |
 |---|---|
-| brn_dminstt_award_count_pit | 그 발주청 직접 거래 누적 |
+| `cutoff_date` | PIT 기준 시점 (= 공고 게시일 `bid_ntce_dt`) |
+| `last_synced_at` | 마트 빌드 시점 (audit) |
 
-### F. 공고 측 (5)
-| 컬럼 | 의미 |
-|---|---|
-| presmpt_prce | 사정가격 |
-| asign_bdgt_amt | 배정예산 |
-| cntrct_cncls_mthd_nm | 계약방식 (일반경쟁/제한/수의) |
-| bid_month, bid_quarter | 시기 (계절성) |
-| bid_dminstt_cd | 발주청 코드 |
-| bid_dtil_prdct_no | 품목 분류번호 |
+---
 
-### G. 시장 구조 PIT (3)
-| 컬럼 | 의미 |
-|---|---|
-| item_pool_density_pit | 그 품목 등록 BRN 수 (시장 깊이) |
-| item_recent_unmet_pit | 최근 미낙찰 비율 |
-| item_top1_concentration_pit | 상위 BRN 집중도 |
+### 4.10 빌드 파이프라인
 
-### 메타
-| 컬럼 | 의미 |
-|---|---|
-| cutoff_date | PIT 기준 시점 (이 시점 이전 데이터만 사용) |
-| last_synced_at | 빌드 시점 |
+```
+mart_features_at_bid 빌드 흐름:
 
-**중요**: 모든 `*_pit` 컬럼은 `cutoff_date` 이전 데이터만 사용. 빌드 SQL은 `pipeline/build_features.py` 또는 `sql/2026-05-05_features.sql`.
+1. tmp_candidate_pool 생성 (CTE 또는 임시테이블)
+   ├─ pool='prefix_warm': stg_bid_notice ⨉ (mart_item_supply ∩ warm_brns)
+   └─ 환경공단 공고 한정 + cutoff_date = bid_ntce_dt
+
+2. SQL_INSERT_FEATURES — 단일 INSERT ... SELECT
+   ├─ tmp_candidate_pool 좌측에 두고
+   ├─ LATERAL 서브쿼리 6개 (env_pit, bid_pit, item_pit, dminstt_pit, market_pit + a_final/o_top1 라벨)
+   └─ TRUNCATE → INSERT (full rebuild, idempotent)
+
+3. 인덱스 (PK 외)
+   - idx_features_brn (BRN 검색)
+   - idx_features_cutoff (시계열)
+   - idx_features_item (품목 검색)
+   - idx_features_winner (positive sample 추출)
+```
+
+**실행:**
+```bash
+uv run python scripts/build_features.py --pool prefix_warm
+# 약 30초~1분, 343,019 rows / 1,359 BRN / 2,702 bids
+```
+
+---
+
+### 4.11 LightGBM 학습 결과 — Top 15 Feature Importance (gain)
+
+학습 결과 참고용 (실제 `artifacts/feature_importance.csv`):
+
+| 순위 | 피처 | 그룹 |
+|---|---|---|
+| 1 | `brn_item_award_count_pit` | D 도메인 적합성 |
+| 2 | `env_award_count_pit` | B 누적 |
+| 3 | `env_avg_rate_pit` | B 누적 |
+| 4 | `brn_dminstt_award_count_pit` | E 권역 |
+| 5 | `env_recent_1y_count_pit` | B 누적 (최근) |
+| 6 | `presmpt_prce` | F 공고 |
+| 7 | `g2b_age_years` | A 정적 |
+| 8 | `bid_top1_count_pit` | C 활발도 |
+| 9 | `item_pool_density_pit` | G 시장 |
+| 10 | `bid_lost_ratio_pit` | C 위험 |
+
+→ **D > B > E > C 순으로 영향력 큼.** SR 인증 (A) 는 중간 (LightGBM 은 SR 정책 가점 직접 안 학습 — 룰베이스로 보강).
+
+---
+
+### 4.12 결측 / 함정
+
+- **psycopg2 BOOLEAN → Python object** — pandas 로 읽으면 dtype=object. 학습 직전 `int8` 캐스팅 필요 (`scripts/train_baseline.py` `BOOL_COLS` 참조)
+- **avg_rate NULL** — 낙찰 이력 없는 BRN → fillna(0) 또는 keep as missing (LightGBM 자동 처리)
+- **g2b_age_years NULL** — 등록일 없는 BRN. 전체 ~5%
+- **main_prdct_match** — `m.main_dtil_prdct_cd IS NULL` 케이스 `COALESCE(... = ..., false)` 로 처리
+- **leakage 위험** — `participated_in_bid` 컬럼은 학습에 쓰면 라벨 누설. `train_baseline.py DROP_COLS` 에 포함
 
 ---
 
