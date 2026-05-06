@@ -34,7 +34,7 @@ cd frontend && npm install && npm run dev          # 터미널 2 (5173)
 
 ---
 
-## 1. 시스템 한 그림
+## 1. 전체 아키텍처
 
 ```
 [조달청 G2B OpenAPI 4종]              [조달업체 CSV]
@@ -110,14 +110,14 @@ erDiagram
 
 ## 4. 피처 엔지니어링 — `mart_features_at_bid` 30 컬럼
 
-### 4.0 핵심 개념
+### 4.0 설계 원칙
 
 **PIT (Point-In-Time)** — 각 공고에 대해 그 공고 시점(`cutoff_date = bid_ntce_dt` 게시일) **이전 데이터만 집계**. 미래 정보 누설 방지 (leakage prevention).
 
 ```sql
 -- 잘못된 예 (leakage)
 SELECT COUNT(*) FROM stg_award WHERE bidwinnr_brn = 'X'
--- → 미래 낙찰까지 포함되어 학습 시 답을 미리 본 셈
+-- → 미래 낙찰 이력이 포함되어 라벨 누설이 발생함
 
 -- 올바른 PIT 패턴
 LEFT JOIN LATERAL (
@@ -127,10 +127,10 @@ LEFT JOIN LATERAL (
 ) env_pit ON true
 ```
 
-**Candidate Pool** (mart_features_at_bid 의 행 단위) — 모든 공고 × 모든 BRN 조합은 너무 큼. 3가지 풀 정책 선택:
+**Candidate Pool** (`mart_features_at_bid`의 행 단위) — 전체 공고와 전체 BRN의 모든 조합을 생성하면 후보 수가 과도하게 커진다. 따라서 아래 3가지 후보 풀 정책 중 하나를 사용한다:
 - `item` — 그 공고 품목(prefix4) 등록 BRN 전체
-- `warm_only` — 환경공단 활동 BRN ∩ 등록 (작지만 의미 있는 풀)
-- `prefix_warm` — 그 공고 prefix4 등록 ∩ warm 활동 (현재 채택, 균형)
+- `warm_only` — 환경공단 활동 BRN ∩ 등록 BRN. 후보 수는 작지만 환경공단 이력이 있는 BRN 중심으로 구성된다.
+- `prefix_warm` — 그 공고 prefix4 등록 BRN ∩ warm 활동 BRN. 현재 기본값이며, 후보 규모와 커버리지의 균형을 맞춘 방식이다.
 
 `scripts/build_features.py --pool prefix_warm` (default).
 
@@ -141,7 +141,7 @@ LEFT JOIN LATERAL (
 |---|---|---|
 | bid_ntce_no, bid_ntce_ord, brn | str | (공고 × BRN) PK |
 | **is_winner** | bool | **타겟 (분류)** — 이 BRN이 이 공고에서 최종 낙찰 |
-| participated_in_bid | bool | 응찰 여부 (5번 1순위 또는 1번 낙찰자) — leakage 위험 컬럼 (분류 학습 시 drop) |
+| participated_in_bid | bool | 응찰 여부 (5번 1순위 또는 1번 낙찰자) — leakage 위험 컬럼 (분류 학습 시 제외) |
 
 **라벨 정의 SQL:**
 ```sql
@@ -161,7 +161,7 @@ LEFT JOIN LATERAL (
 **분포 (실측, 학습 데이터 268k row):**
 - `is_winner = TRUE` 비율 ≈ 0.16% (449 winners)
 - `participated_in_bid = TRUE` 비율 ≈ 0.6%
-- → 극심한 class imbalance. LightGBM `scale_pos_weight=154` 자동 보정.
+- → 극심한 클래스 불균형이 있으므로 LightGBM 학습 시 `scale_pos_weight=154`로 자동 보정한다.
 
 ---
 
@@ -188,7 +188,7 @@ EXTRACT(EPOCH FROM (p.cutoff_date - m.g2b_registered_at::timestamptz))
 
 ### 4.3 B. BRN 환경공단 누적 PIT (6)
 
-> **가설**: 과거 환경공단 낙찰 이력이 풍부할수록 미래 낙찰 확률 ↑ (관성 효과)
+> 과거 환경공단 낙찰 이력이 많을수록 향후 낙찰 가능성이 높아질 수 있다. 이 그룹은 BRN의 환경공단 거래 이력을 나타낸다.
 
 LATERAL 서브쿼리 패턴:
 ```sql
@@ -222,9 +222,9 @@ LEFT JOIN LATERAL (
 
 ---
 
-### 4.4 C. BRN 응찰 패턴 PIT (4) — 위험 시그널
+### 4.4 C. BRN 응찰 패턴 PIT (4) — 리스크 지표
 
-> **가설**: 5번에서 1순위였는데 1번에서 다른 BRN이 낙찰자 = 자격검사 탈락 / 시담 결렬. 이런 패턴 잦은 BRN은 미래에도 못 받을 가능성 ↑
+> 5번 개찰결과에서 1순위였지만 1번 낙찰자 데이터에서 다른 BRN이 최종 낙찰자로 기록된 경우는 자격검사 탈락 또는 시담 결렬 가능성을 의미한다. 이 패턴이 반복되는 BRN은 향후 최종 낙찰 단계에서 리스크가 있을 수 있다.
 
 ```sql
 LEFT JOIN LATERAL (
@@ -246,7 +246,7 @@ LEFT JOIN LATERAL (
 |---|---|---|
 | `bid_top1_count_pit` | 1순위 누적 횟수 | 활발도 |
 | `bid_lost_count_pit` | 1순위였으나 최종낙찰 실패 | **위험** |
-| `bid_lost_ratio_pit` | lost / top1 | **0.3+ 면 검토 필요** |
+| `bid_lost_ratio_pit` | lost / top1 | **0.3 이상이면 검토 필요** |
 | `bid_recent_lost_count_pit` | 최근 1년 탈락 | 최신 위험 |
 
 **룰베이스 위험등급 임계값** (`pipeline/recommend_v2.py`):
@@ -261,7 +261,7 @@ RISK_TOP1_SAFE: int = 3        # 안전 등급 진입 최소 top1
 
 ### 4.5 D. BRN × 품목 매칭 PIT (3) — 도메인 적합성
 
-> **가설**: BRN이 같은 품목군(prefix4)에서 자주 낙찰받으면 그 도메인 전문성 高
+> BRN이 같은 품목군(prefix4)에서 자주 낙찰받았다면 해당 품목군에 대한 도메인 전문성이 높다고 볼 수 있다.
 
 ```sql
 LEFT JOIN LATERAL (
@@ -322,7 +322,7 @@ PIT 불필요 (공고 자체 메타).
 
 ### 4.8 G. 시장 구조 PIT (3)
 
-> **가설**: 그 품목 시장이 두꺼우면 경쟁 강해 낙찰 확률 ↓. 최근 미낙찰 많으면 진입 기회.
+> 해당 품목의 공급 업체 수가 많으면 경쟁 강도가 높아져 개별 BRN의 낙찰 가능성이 낮아질 수 있다. 반대로 최근 미낙찰 비율이 높으면 신규 후보가 낙찰될 여지가 커질 수 있다.
 
 | 컬럼 | 의미 |
 |---|---|
@@ -387,17 +387,17 @@ uv run python scripts/build_features.py --pool prefix_warm
 | 9 | `item_pool_density_pit` | G 시장 |
 | 10 | `bid_lost_ratio_pit` | C 위험 |
 
-→ **D > B > E > C 순으로 영향력 큼.** SR 인증 (A) 는 중간 (LightGBM 은 SR 정책 가점 직접 안 학습 — 룰베이스로 보강).
+→ **D > B > E > C 순으로 영향력이 크다.** SR 인증(A)은 중간 수준이다. LightGBM은 SR 정책 가점을 직접 학습하지 않으므로 운영 랭킹에서는 룰베이스로 보강한다.
 
 ---
 
 ### 4.12 결측 / 함정
 
-- **psycopg2 BOOLEAN → Python object** — pandas 로 읽으면 dtype=object. 학습 직전 `int8` 캐스팅 필요 (`scripts/train_baseline.py` `BOOL_COLS` 참조)
-- **avg_rate NULL** — 낙찰 이력 없는 BRN → fillna(0) 또는 keep as missing (LightGBM 자동 처리)
-- **g2b_age_years NULL** — 등록일 없는 BRN. 전체 ~5%
-- **main_prdct_match** — `m.main_dtil_prdct_cd IS NULL` 케이스 `COALESCE(... = ..., false)` 로 처리
-- **leakage 위험** — `participated_in_bid` 컬럼은 학습에 쓰면 라벨 누설. `train_baseline.py DROP_COLS` 에 포함
+- **psycopg2 BOOLEAN → Python object** — pandas로 읽으면 `dtype=object`가 된다. 학습 직전에 `int8`로 캐스팅해야 한다. (`scripts/train_baseline.py` `BOOL_COLS` 참조)
+- **avg_rate NULL** — 낙찰 이력이 없는 BRN에서 발생한다. `fillna(0)` 처리하거나 missing 상태로 두면 LightGBM이 자동 처리한다.
+- **g2b_age_years NULL** — 등록일이 없는 BRN에서 발생한다. 전체의 약 5% 수준이다.
+- **main_prdct_match** — `m.main_dtil_prdct_cd IS NULL`인 경우 `COALESCE(... = ..., false)`로 처리한다.
+- **leakage 위험** — `participated_in_bid` 컬럼을 학습에 사용하면 라벨 누설이 발생한다. `train_baseline.py DROP_COLS`에 포함되어 있다.
 
 ---
 
@@ -417,7 +417,7 @@ uv run python scripts/build_features.py --pool prefix_warm
 [Stage 2] rank  (pipeline/ranker.RuleRanker)
    ├─ 4축 가중합 (sr 0.35 + track 0.30 + price 0.20 + supply 0.15)
    ├─ SR soft floor: n_sr_certified ≥ 3 → sr=0 BRN -1.0 demote
-   └─ ★ swap point: ranker=LGBMRanker() 한 줄 교체
+   └─ ★ 교체 지점: ranker=LGBMRanker() 구현체로 전환 가능
    ▼
 [Enrich] (top_k 만)
    ├─ 시장 baseline (전체 + 유사 규모)
@@ -484,26 +484,26 @@ uv run python scripts/build_features.py
 
 ## 8. FAQ
 
-**Q. 왜 LGBM 학습은 했는데 운영엔 안 쓰나?**
-A. CLAUDE.md §13 참조. 사전탐색 모드 (공고 부재) 와 LGBM 학습 입력 (공고 + BRN) 미스매치. 향후 synthetic bid 또는 회귀 모델로 swap 예정.
+**Q. LGBM 학습 결과를 운영 랭킹에 바로 사용하지 않는 이유는?**
+A. CLAUDE.md §13 참조. 현재 운영 화면은 공고가 확정되기 전의 사전 탐색 모드다. 반면 LGBM 모델은 특정 공고와 BRN 조합을 입력으로 학습되어 두 입력 구조가 맞지 않는다. 이후 synthetic bid 생성 또는 회귀 모델 전환 방식으로 운영 랭커에 연결할 예정이다.
 
 **Q. agency_tier 가 뭐?**
 A. `env_corp` (한국환경공단 10), `env_domain` (수자원공사+상수도+환경부 26), `other` (그 외). 풀 확장용. `pipeline.g2b_common.agency_tier_for()` 매핑.
 
-**Q. PIT 가 뭐?**
-A. Point-In-Time. 각 공고 시점 이전 데이터만 집계 → 미래 정보 누설(leakage) 방지. mart_features_at_bid 의 모든 `*_pit` 컬럼이 cutoff_date 이전 한정.
+**Q. PIT란 무엇인가?**
+A. Point-In-Time의 약자다. 각 공고 시점 이전 데이터만 집계하여 미래 정보 누설(leakage)을 방지한다. `mart_features_at_bid`의 모든 `*_pit` 컬럼은 `cutoff_date` 이전 데이터로만 계산된다.
 
-**Q. 새 키워드 추가하려면?**
-A. `pipeline/item_keywords.py` `KEYWORD_FILTERS` dict 에 `(prefix4_list, name_regex)` 추가. 백엔드 자동 노출. 프론트 칩도 자동 (useKeywords 훅).
+**Q. 새 키워드는 어떻게 추가하는가?**
+A. `pipeline/item_keywords.py`의 `KEYWORD_FILTERS` dict에 `(prefix4_list, name_regex)`를 추가한다. 추가된 키워드는 백엔드 응답에 자동 반영되며, 프론트의 키워드 칩도 `useKeywords` 훅을 통해 갱신된다.
 
-**Q. 가중치 (4축) 변경?**
-A. `pipeline/ranker.py` `DEFAULT_WEIGHTS`. 단, sr_diversity ≥ 0.20 (사회적가치법 하한, `pipeline/policy.py`).
+**Q. 4축 가중치는 어디서 변경하는가?**
+A. `pipeline/ranker.py`의 `DEFAULT_WEIGHTS`에서 변경한다. 단, `sr_diversity`는 사회적가치법 하한에 따라 0.20 이상이어야 하며, 관련 상수는 `pipeline/policy.py`에 정의되어 있다.
 
-**Q. 외삽 경고는 언제?**
-A. BRN 의 입력 예산 ±50% 범위 거래 부재. ExpectedPrice.is_extrapolated=True. 카드에 빨간 배지.
+**Q. 외삽 경고는 언제 표시되는가?**
+A. BRN의 과거 거래 중 입력 예산 ±50% 범위에 해당하는 사례가 없을 때 표시된다. 이 경우 `ExpectedPrice.is_extrapolated=True`가 되며, 카드에는 경고 배지로 표시된다.
 
-**Q. 의무비율 20% 어디서 옴?**
-A. 조달사업법 시행령 제24조 "사회적가치 우선구매". `pipeline/policy.SR_LEGAL_FLOOR_PCT = 20.0` 단일 정의.
+**Q. 의무비율 20%의 근거는 무엇인가?**
+A. 조달사업법 시행령 제24조의 사회적가치 우선구매 조항을 기준으로 한다. 관련 값은 `pipeline/policy.SR_LEGAL_FLOOR_PCT = 20.0`으로 단일 정의되어 있다.
 
 ---
 
@@ -538,4 +538,4 @@ curl -X POST http://localhost:8000/api/v2/recommend -H 'Content-Type: applicatio
 
 ---
 
-문제 / 추가 질문은 PR 또는 운영팀에 문의.
+문의 사항은 PR 코멘트로 남기거나 운영팀에 전달한다.
