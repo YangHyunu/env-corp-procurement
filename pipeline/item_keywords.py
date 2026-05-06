@@ -34,6 +34,10 @@ KEYWORD_FILTERS: dict[str, KeywordFilter] = {
     "대기오염 측정장비": KeywordFilter(["4111"],                   r"대기|오염|가스|배기"),
     "폐수처리약품":      KeywordFilter(["4710", "2411"],           r"폐수|약품|화학|응집|중화"),
     "활성탄 필터":       KeywordFilter(["4710"],                   r"활성탄|여과|필터"),
+    # — env_domain 확장 키워드 (수자원공사·상수도·환경부 산하 발주 매칭) —
+    "상하수도 배관":     KeywordFilter(["4014", "4016"],           r"강관|이음관|관로|배관|상수관|하수관"),
+    "분석 시약·시료":    KeywordFilter(["1216"],                   r"시약|시료|질소|기준|표준액"),
+    "실험실 측정기기":   KeywordFilter(["4112", "4111"],           r"실험실|희석기|배양기|분석기|크로마토|분광"),
 }
 
 KEYWORDS: list[str] = list(KEYWORD_FILTERS.keys())

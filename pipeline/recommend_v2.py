@@ -92,15 +92,25 @@ WITH item_name_map AS (
 warm_brns AS (
   SELECT DISTINCT bidwinnr_brn AS brn FROM stg_award a
   JOIN stg_bid_notice b USING (bid_ntce_no, bid_ntce_ord)
-  WHERE b.is_env_corp AND a.bidwinnr_brn IS NOT NULL
+  WHERE b.agency_tier IN ('env_corp', 'env_domain') AND a.bidwinnr_brn IS NOT NULL
 ),
 candidate_brns AS (
+  -- (a) 등록 BRN ∩ warm 풀 (mart_item_supply 기반)
   SELECT DISTINCT mis.brn
   FROM mart_item_supply mis
   JOIN item_name_map inm USING (dtil_prdct_clsfc_no)
   JOIN warm_brns wb ON wb.brn = mis.brn
   WHERE LEFT(mis.dtil_prdct_clsfc_no, 4) = ANY(%(prefix4)s)
     AND inm.dtil_prdct_clsfc_no_nm ~ %(name_regex)s
+  UNION
+  -- (b) 매칭 품목 실제 낙찰 이력자 (등록 미반영 BRN 보완 — env_domain 확장 효과)
+  SELECT DISTINCT a.bidwinnr_brn AS brn
+  FROM stg_award a
+  JOIN stg_bid_notice b USING (bid_ntce_no, bid_ntce_ord)
+  WHERE b.agency_tier IN ('env_corp', 'env_domain')
+    AND a.bidwinnr_brn IS NOT NULL
+    AND LEFT(b.dtil_prdct_clsfc_no, 4) = ANY(%(prefix4)s)
+    AND b.dtil_prdct_clsfc_no_nm ~ %(name_regex)s
 ),
 brn_env_stats AS (
   SELECT a.bidwinnr_brn AS brn,
@@ -110,7 +120,7 @@ brn_env_stats AS (
          MAX(a.fnl_sucsf_date) AS last_award_at
   FROM stg_award a
   JOIN stg_bid_notice b USING (bid_ntce_no, bid_ntce_ord)
-  WHERE b.is_env_corp AND a.bidwinnr_brn IS NOT NULL
+  WHERE b.agency_tier IN ('env_corp', 'env_domain') AND a.bidwinnr_brn IS NOT NULL
   GROUP BY 1
 )
 SELECT cb.brn,
@@ -168,7 +178,7 @@ def _market_baseline(conn, prefix4: list[str], name_regex: str) -> dict:
       STDDEV(a.sucsfbid_rate) AS std
     FROM stg_award a
     JOIN stg_bid_notice b USING (bid_ntce_no, bid_ntce_ord)
-    WHERE b.is_env_corp
+    WHERE b.agency_tier IN ('env_corp', 'env_domain')
       AND LEFT(b.dtil_prdct_clsfc_no, 4) = ANY(%(prefix4)s)
       AND b.dtil_prdct_clsfc_no_nm ~ %(name_regex)s
       AND a.sucsfbid_rate IS NOT NULL
@@ -199,7 +209,7 @@ def _brn_rate_distribution(conn, brns: list[str]) -> dict[str, dict]:
            ARRAY_AGG(a.sucsfbid_amt  ORDER BY a.fnl_sucsf_date) AS amts
     FROM stg_award a
     JOIN stg_bid_notice b USING (bid_ntce_no, bid_ntce_ord)
-    WHERE b.is_env_corp
+    WHERE b.agency_tier IN ('env_corp', 'env_domain')
       AND a.bidwinnr_brn = ANY(%s)
       AND a.sucsfbid_rate IS NOT NULL
     GROUP BY 1
@@ -219,7 +229,7 @@ def _brn_risk_signals(conn, brns: list[str]) -> dict[str, dict]:
       FROM stg_opening_result o
       LEFT JOIN stg_award a USING (bid_ntce_no, bid_ntce_ord)
       JOIN stg_bid_notice b USING (bid_ntce_no, bid_ntce_ord)
-      WHERE b.is_env_corp AND o.winner_brn IS NOT NULL AND o.rbid_no='000'
+      WHERE b.agency_tier IN ('env_corp', 'env_domain') AND o.winner_brn IS NOT NULL AND o.rbid_no='000'
     )
     SELECT brn,
            COUNT(*) AS top1_count,
@@ -272,7 +282,7 @@ def _precedents(
            a.bidwinnr_nm AS winner_corp_name
     FROM stg_bid_notice b
     JOIN stg_award a USING (bid_ntce_no, bid_ntce_ord)
-    WHERE b.is_env_corp
+    WHERE b.agency_tier IN ('env_corp', 'env_domain')
       AND LEFT(b.dtil_prdct_clsfc_no, 4) = ANY(%s)
       AND b.dtil_prdct_clsfc_no_nm ~ %s
       AND a.sucsfbid_amt BETWEEN %s AND %s

@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from pipeline.g2b_common import (  # noqa: E402
     ENV_CORP_DMINSTT_CDS,
+    agency_tier_for,
     ENV_CORP_DMINSTT_NAMES,
     normalize_brn,
     parse_dt,
@@ -60,7 +61,7 @@ STG_BID_NOTICE_COLS = [
     "dtil_prdct_clsfc_no", "dtil_prdct_clsfc_no_nm",
     "presmpt_prce", "asign_bdgt_amt",
     "bid_ntce_dt", "openg_dt", "bid_clse_dt",
-    "cntrct_cncls_mthd_nm", "is_env_corp", "fetched_at",
+    "cntrct_cncls_mthd_nm", "is_env_corp", "agency_tier", "fetched_at",
 ]
 STG_BID_NOTICE_INSERT = (
     f"INSERT INTO stg_bid_notice ({', '.join(STG_BID_NOTICE_COLS)}) VALUES %s"
@@ -100,6 +101,7 @@ def parse_bid_notice(xml_str: str, fetched_at: datetime) -> tuple | None:
         parse_dt(_txt(it, "bidClseDt")),
         _txt(it, "cntrctCnclsMthdNm"),
         dminstt_cd in ENV_SET,
+        agency_tier_for(dminstt_cd or ""),
         fetched_at,
     )
 
