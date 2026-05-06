@@ -1,20 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { Settings } from 'lucide-react'
 import { useMeta } from '@/lib/hooks'
-
-interface SettingsState {
-  sr_target: number
-  top_k: number
-  budget_unit: string
-}
+import type { DashboardSettings } from '@/lib/types'
+import { SR_LEGAL_FLOOR_PCT, SR_TARGET_OPTIONS, TOPK_OPTIONS } from '@/lib/constants'
 
 interface Props {
-  settings: SettingsState
-  onSaveSettings: (s: SettingsState) => void
+  settings: DashboardSettings
+  onSaveSettings: (s: DashboardSettings) => void
 }
-
-const SR_OPTIONS = [15, 20, 30, 40, 50]
-const TOPK_OPTIONS = [3, 5, 10]
 
 export function Header({ settings, onSaveSettings }: Props) {
   const { data: meta } = useMeta()
@@ -174,9 +167,9 @@ export function Header({ settings, onSaveSettings }: Props) {
                   }
                   style={selectStyle}
                 >
-                  {SR_OPTIONS.map((v) => (
+                  {SR_TARGET_OPTIONS.map((v) => (
                     <option key={v} value={v}>
-                      {v}%{v === 20 ? ' (법정)' : ''}
+                      {v}%{v === SR_LEGAL_FLOOR_PCT ? ' (법정)' : ''}
                     </option>
                   ))}
                 </select>

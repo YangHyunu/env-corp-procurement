@@ -1,5 +1,5 @@
 import type { RecommendationV2Item } from '@/lib/types'
-import { tierLabel } from '@/lib/utils'
+import { SrBadge, TierBadge } from '@/lib/badges'
 
 interface Props {
   item: RecommendationV2Item
@@ -119,7 +119,7 @@ export function RecommendationCard({
         <div style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
           <TierBadge tier={tier} />
           {item.badges.map((b) => (
-            <BadgeChip key={b} label={b} />
+            <SrBadge key={b} label={b} />
           ))}
         </div>
 
@@ -170,48 +170,3 @@ export function RecommendationCard({
   )
 }
 
-function TierBadge({ tier }: { tier: string }) {
-  const styles: Record<string, React.CSSProperties> = {
-    A: { background: '#dcfce7', color: '#15803d' },
-    B: { background: '#dbeafe', color: '#1e40af' },
-    C: { background: '#f1f5f9', color: '#475569' },
-  }
-  return (
-    <span
-      style={{
-        fontSize: 9,
-        padding: '2px 7px',
-        borderRadius: 5,
-        fontWeight: 700,
-        letterSpacing: '0.01em',
-        ...(styles[tier] ?? styles.C),
-      }}
-    >
-      {tierLabel(tier)}
-    </span>
-  )
-}
-
-function BadgeChip({ label }: { label: string }) {
-  const srBadges: Record<string, React.CSSProperties> = {
-    여성기업: { background: '#fce7f3', color: '#be185d' },
-    장애인기업: { background: '#fef3c7', color: '#92400e' },
-    사회적기업: { background: '#d1fae5', color: '#065f46' },
-  }
-  const style = srBadges[label] ?? { background: '#ede9fe', color: '#6d28d9' }
-
-  return (
-    <span
-      style={{
-        fontSize: 9,
-        padding: '2px 7px',
-        borderRadius: 5,
-        fontWeight: 700,
-        letterSpacing: '0.01em',
-        ...style,
-      }}
-    >
-      {label}
-    </span>
-  )
-}

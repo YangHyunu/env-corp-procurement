@@ -9,13 +9,7 @@ import { RecommendationCard } from '@/components/RecommendationCard'
 import { DetailPanel } from '@/components/DetailPanel'
 import { CompareTable } from '@/components/CompareTable'
 import { useKeywords, useRecommend, useLocalStorage } from '@/lib/hooks'
-import type { SrFilterV2 } from '@/lib/types'
-
-interface Settings {
-  sr_target: number
-  top_k: number
-  budget_unit: string
-}
+import type { DashboardSettings, SrFilterV2 } from '@/lib/types'
 
 function Dashboard() {
   // ── 설정 (LocalStorage) ─────────────────────────────────────────
@@ -23,9 +17,9 @@ function Dashboard() {
   const [topK, setTopK] = useLocalStorage('eco_top_k', 5)
   const [budgetUnit, setBudgetUnit] = useLocalStorage('eco_budget_unit', '백만원')
 
-  const settings: Settings = { sr_target: srTarget, top_k: topK, budget_unit: budgetUnit }
+  const settings: DashboardSettings = { sr_target: srTarget, top_k: topK, budget_unit: budgetUnit }
 
-  const handleSaveSettings = (s: Settings) => {
+  const handleSaveSettings = (s: DashboardSettings) => {
     setSrTarget(s.sr_target)
     setTopK(s.top_k)
     setBudgetUnit(s.budget_unit)
@@ -100,14 +94,8 @@ function Dashboard() {
 
   const compareItems = recs.filter((r) => compareSet.has(r.brn))
 
-  // SR compliance 재계산 (클라이언트)
-  const compliance = result?.compliance
-    ? {
-        ...result.compliance,
-        obligation_threshold_pct: srTarget,
-        obligation_met: result.compliance.sr_pct_top_k >= srTarget,
-      }
-    : null
+  // SR compliance — server 결정이 single source of truth (법정 하한 우회 방지)
+  const compliance = result?.compliance ?? null
 
   const budgetMillion = budgetUnit === '억원' ? budget * 100 : budget
   const liveCount = result?.kpi?.pool_size ?? null
@@ -153,11 +141,7 @@ function Dashboard() {
                 precedents={recs[0]?.precedents ?? []}
               />
 
-              <ComplianceBar
-                compliance={compliance}
-                srTarget={srTarget}
-                onSrTargetChange={setSrTarget}
-              />
+              <ComplianceBar compliance={compliance} topK={topK} />
 
               <KpiGrid kpi={result.kpi} budgetMillion={budgetMillion} />
 

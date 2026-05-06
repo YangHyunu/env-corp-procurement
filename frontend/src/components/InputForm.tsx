@@ -58,7 +58,7 @@ export function InputForm({
           조회 조건
         </h2>
         <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>
-          조건 변경 시 자동 반영
+          품목 선택 시 자동 산출 · 그 외 조건은 재산출 버튼
         </span>
       </div>
 

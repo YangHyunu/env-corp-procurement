@@ -93,6 +93,13 @@ export interface ComplianceInfo {
   obligation_met: boolean
 }
 
+export interface AxesV2 {
+  supply_stability: number
+  sr_diversity: number
+  track_record: number
+  price_competitiveness: number
+}
+
 export interface RecommendationV2Item {
   rank: number
   brn: string
@@ -107,6 +114,7 @@ export interface RecommendationV2Item {
   precedents: PrecedentItem[]
   charts: ChartsData
   rule_score: number
+  axes: AxesV2
   ml_score: number | null
   score_used: string
   reason: string
@@ -127,6 +135,13 @@ export interface MetaResponse {
   freshness_days: number
   stale_warning: boolean
   sources: Record<string, string>
+}
+
+// ── 대시보드 클라이언트 설정 ─────────────────────────────────────────
+export interface DashboardSettings {
+  sr_target: number
+  top_k: number
+  budget_unit: string
 }
 
 // ── V1 타입 (하위호환 유지) ─────────────────────────────────────────

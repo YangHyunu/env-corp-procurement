@@ -213,6 +213,7 @@ class RecommendationV2Item(BaseModel):
     precedents: list[PrecedentItem]
     charts: ChartsData
     rule_score: float
+    axes: dict[str, float]           # 4축 weighted_segments — RuleRanker.score 계산
     ml_score: float | None = None    # (B) LGBM 도입 시 채워짐
     score_used: str = "rule"
     reason: str

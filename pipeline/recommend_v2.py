@@ -471,6 +471,7 @@ def _build_recommendation_item(
         precedents=[PrecedentItem(**p) for p in precedents],
         charts=ChartsData(**_make_charts(dist)),
         rule_score=float(c["rule_score"]),
+        axes=c["axes"],
         ml_score=None,
         score_used="rule",
         reason=_reason(c, market.get("mean")),

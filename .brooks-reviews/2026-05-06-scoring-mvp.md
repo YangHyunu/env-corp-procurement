@@ -1,12 +1,13 @@
-# Brooks-Lint Review (재실행 — 확장된 범위)
+# Brooks-Lint Review (3rd run — frontend v2 follow-up)
 
-**Mode:** PR Review (re-run after 6 new commits landed)
-**Scope:** branch `feat/scoring-mvp` vs `main` — 62 files / +18,624 / −70. Sampled toward highest-risk new Python: `pipeline/recommend_v2.py` (564), `pipeline/ranker.py` (127), `pipeline/item_keywords.py` (49), `api/schemas.py` (233). Skipped: `frontend/package-lock.json` and `uv.lock` (generated), `app/streamlit_app.py` (deprecated per CLAUDE.md §5), React `ui/*` shadcn primitives (vendor), prior-reviewed `pipeline/scoring.py` + `scripts/demo_scoring.py`.
-**Trend:** 64 → 58 (−6) — first re-run
+**Mode:** PR Review
+**Scope:** branch `feat/scoring-mvp` vs `main`. 이전 라운드(2회)의 Python 발견 6건은 commit `3ad0928`에서 모두 해소 확인 (SR_LEGAL_FLOOR 단일화 → `pipeline/policy.py`, RuleRanker 권위화 → `scoring.py` 위임, `enrich()` 분해, 단일 connection, 강타입). 이번 라운드는 그 이후 새로 추가된 frontend v2 commit `e391047` (+3,735 / 14 신규 컴포넌트 + hooks) + 표시-계층 무결성에 집중. 건너뜀: `analysis/dashboard_mockup_v2_1.html` (디자인 목업, 비-프로덕션), 이전 라운드 검토 완료된 Python.
+**Health Score:** 42/100
+**Trend:** 64 → 58 → 42 (−16 from prior run) over last 3 runs
 
-PR이 이번 주 +18k줄로 폭발했고, 룰 기반 추천 엔진이 두 모듈에 중복 구현되며 동시에 SQL 합성 패턴·연결 관리·타입 계약이 모두 일관성을 잃었다 — Brooks의 Conceptual Integrity 시그널이 켜진 시점.
+룰베이스 추천 엔진은 정리됐지만, 이번 라운드는 의사결정 표시 계층(Display layer)에서 더 위험한 신호 — 정부 사용자에게 보여주는 "근거" 차트가 `Math.random()`으로 만들어진 가짜이고, 법정 의무비율 판단이 클라이언트에서 재계산되어 서버 결정을 덮어쓴다. 룰 엔진은 정확해도 그 결과를 변형해 노출하는 표시-계약이 Conceptual Integrity를 깬다.
 
-> **Note:** PR > 500 lines is itself a Change Propagation signal — review의 한 번에 보일 수 없는 사이즈. 7 commits 모두 별도 PR로 쪼갰으면 각 commit별 리스크가 훨씬 명확했을 것.
+> **Note:** PR > 500 lines는 그 자체가 Change Propagation 신호. frontend 14개 컴포넌트가 한 commit에 묶여 있어 한 번에 보이지 않는 사이즈 — 각 카드/패널/비교/입력을 독립 PR로 쪼갰으면 디자인-시스템 차원의 중복이 더 일찍 보였을 것.
 
 ---
 
@@ -14,62 +15,74 @@ PR이 이번 주 +18k줄로 폭발했고, 룰 기반 추천 엔진이 두 모듈
 
 ### 🔴 Critical
 
-**Knowledge Duplication — RuleRanker는 `pipeline/scoring.py`의 두 번째 사본**
-- **Symptom:** `pipeline/ranker.py:19-25` (`DEFAULT_WEIGHTS`, `SR_LEGAL_FLOOR`)와 `pipeline/scoring.py:36-42`가 동일한 값. `_validate_weights`는 `ranker.py:39-46`과 `scoring.py:99-106`에 토씨 하나 다르지 않게 재구현. 4축 산식 (rank/percentile, `clip(0,3)/3.0`, `0.6 * norm_count + 0.4 * norm_bid_rate`, unit_price 역백분위), SR soft-floor `composite_score -= 1.0` (line 110 vs 182)도 동일. `ranker.py` docstring이 직접 인정함: "4축 가중합 — pipeline.scoring 의 v1 로직 이식."
-- **Source:** Hunt & Thomas — *The Pragmatic Programmer*, DRY; Brooks — *The Mythical Man-Month*, Ch. 4: Conceptual Integrity
-- **Consequence:** 가중치 또는 floor 임계 조정 시 두 모듈을 함께 수정해야 한다 — 잊으면 v1 API (`/api/recommend`)와 v2 (`/api/v2/recommend`)가 같은 입력에 대해 다른 순위를 반환한다. 분기 1회 가중치 재검토(CLAUDE.md §12)가 곧 silent regression의 진앙이 될 수 있다. CLAUDE.md §11이 명시한 "Stage 2 swap point"라는 v2의 핵심 약속도 무너진다 — RuleRanker 자체가 swap-out 대상인데 v1 동치를 두 곳에 박아놓으면 LGBMRanker로 갈 때 어느 쪽을 기준으로 학습해야 하는지 모호해진다.
-- **Remedy:** `pipeline/ranker.py`의 `RuleRanker`만을 정통(canonical)으로 남기고, `pipeline/scoring.py`는 (a) 완전 제거(v1 API 엔드포인트가 `RuleRanker`를 직접 사용하도록 `api/main.py:115`만 갈아끼움), 또는 (b) `score()` 함수가 내부적으로 `RuleRanker().score(...)`를 위임하는 얇은 어댑터로 축소. 어떤 쪽이든 가중합·SR-floor·검증 로직은 한 군데에서만 변경 가능하도록.
+**Domain Model Distortion — RadarSection이 `Math.random()`과 조작된 산식으로 가짜 평가점수를 표시**
+- **Symptom:** `frontend/src/components/RadarSection.tsx:35` — `value: Math.min(1, Math.max(0, (item.rule_score + Math.random() * 0.1 - 0.05)))`. 매 render마다 `Math.random()`이 호출되어 동일 입력에 매번 다른 차트가 그려진다. Legend(line 41-50)는 `weighted_segments`를 옵셔널 cast로 읽지만 (`item as unknown as { weighted_segments?: ... }`) — 확인 결과 `api/schemas.py:200-217 RecommendationV2Item`에는 `weighted_segments`/`axes` 필드가 **없고**, V1 `RecommendationItem`에만 존재 (line 92-93). `pipeline/recommend_v2.py`의 `_make_recommendation` (line 459-476)도 4축 점수를 emit하지 않으므로 fallback 경로(`item.rule_score * (key === 'sr_diversity' ? 1.2 : key === 'track_record' ? 1.1 : 0.8)`)가 **항상** 실행된다. 결국 4개 축은 단일 `rule_score`에 임의 상수를 곱한 cosmetic transform.
+- **Source:** Evans — *Domain-Driven Design*, Domain Model 정확성; Winters et al. — *Software Engineering at Google*, Hyrum's Law (UI가 약속한 "근거" ≠ 코드의 행위)
+- **Consequence:** CLAUDE.md §9가 명시한 "calibration 안 된 ML probability를 사용자에게 raw로 노출 금지"의 정신을 한 단계 더 위반한다 — calibration 안 된 점수도 아니고, 의미 없는 난수와 곱셈. 공무원이 "이 업체는 SR 0.85, 가격 0.65, 실적 0.78점이라 추천한다"라고 판단하지만 그 숫자는 매 리렌더 다르고 4축은 한 점수의 변형. 감사 시 "왜 이 업체를 추천했느냐"의 시각적 근거가 거짓으로 드러나면 정부 도구로서 신뢰가 무너진다. 룰 엔진이 정확해도 노출 단계가 거짓이면 의사결정 도구로 쓸 수 없음.
+- **Remedy:** (a) backend `pipeline/recommend_v2.py`가 이미 `RuleRanker.score()`에서 4축 weighted_segments를 계산하므로 `_make_recommendation`이 그 dict를 그대로 노출 + `api/schemas.py:200`의 `RecommendationV2Item`에 `axes: dict[str, float]` 추가 + `frontend/src/lib/types.ts:96-113`의 `RecommendationV2Item`에 같은 필드 추가. (b) `Math.random()` 즉시 제거. (c) 단기 임시 조치가 필요하면 RadarSection을 제거하고 `item.reason` 텍스트 + 단일 합계점수 막대로 대체.
+
+**Knowledge Duplication / Hyrum's Law — Compliance를 client에서 재계산해 server 결정을 덮어씀**
+- **Symptom:** `frontend/src/App.tsx:104-110` — `compliance: { ...result.compliance, obligation_threshold_pct: srTarget, obligation_met: result.compliance.sr_pct_top_k >= srTarget }`. 서버가 이미 `pipeline/recommend_v2.py:570-572`에서 `SR_LEGAL_FLOOR_PCT` (정확히 20.0, `pipeline/policy.py` 단일 정의) 기준으로 `obligation_met`을 계산해 응답하지만, 클라이언트는 그것을 무시하고 사용자가 Header 설정에서 고른 `srTarget` (15/20/30/40/50%)으로 다시 비교한다. `ComplianceBar.tsx:14`에서 한 번 더 같은 비교 (`met = compliance.sr_pct_top_k >= srTarget`).
+- **Source:** Hunt & Thomas — *Pragmatic Programmer*, DRY: Single Source of Truth; Winters et al. — *Software Engineering at Google*, Hyrum's Law; CLAUDE.md §11 obligation 로직 + §12 "공무원 사용자에게 운영 권한 부여 금지"의 정신
+- **Consequence:** 사용자가 Header → 설정에서 SR 의무비율 기본값을 15%로 내리고 localStorage에 저장하면, 서버는 같은 응답에 대해 `obligation_met=false` (legal floor 20%)인데 클라이언트는 `obligation_met=true`로 표시. 공무원이 "법정 충족"으로 보고 발주 진행 → 실제로는 미충족. 더 근본 문제: 법정 의무비율은 사용자 토글 대상이 **아니다** (조달사업법 시행령). 클라이언트 localStorage(`eco_sr_target`, `useLocalStorage` line `App.tsx:22`)로 변경 가능하게 만든 것 자체가 사용자가 법령을 우회하는 통로를 코드로 만들어준 것. 서버 로그(미충족)와 화면 표시(충족)가 다르면 감사 추적도 불가능.
+- **Remedy:** (a) 서버의 `compliance.obligation_met` + `obligation_threshold_pct`를 single source of truth로 사용 — App.tsx:104-110 클라이언트 재계산 블록 제거, ComplianceBar는 `compliance.obligation_met`을 직접 표시. (b) Header의 SR 의무비율 select는 **표시 정렬용**이거나 제거. 진짜로 30%/40% 강화 정책을 적용하려면 서버 요청 파라미터로 보내고 서버에서 `max(SR_LEGAL_FLOOR_PCT, user_target)` 처리. 어떤 경우에도 "20% 미만"은 클라이언트에서 선택 불가능해야 함. (c) `frontend/src/components/Header.tsx:16` `SR_OPTIONS`에서 `15`를 제거 — 법정 하한 미만은 UI 옵션으로 존재해서는 안 됨.
 
 ### 🟡 Warning
 
-**Cognitive Overload — `enrich()`가 121줄에 5개 phase 혼합**
-- **Symptom:** `pipeline/recommend_v2.py:322-443` 한 함수 안에서 (1) brn 리스트 추출 + 4개 SQL helper 호출, (2) 예상가 점추정/구간/시장편차, (3) 리스크 등급+dormancy, (4) 공급 안정성+g2b_age, (5) 시각화 raw + DTO 조립이 직렬로 진행. 1개 BRN당 ~80줄 DTO build가 for 루프 안에 인라인. 심각도 가이드는 > 50줄 + nesting 2-3 = Warning 경계.
-- **Source:** Fowler — *Refactoring*, Long Method; McConnell — *Code Complete*, Ch. 7
-- **Consequence:** "예상가 fallback 정책 변경", "dormancy 기준 24개월 → 18개월", "tier 컷오프 조정" 같은 단일 도메인 변경이 모두 같은 함수 본문을 수정하게 만든다 — diff에서 책임이 섞이고, 이 함수에 대한 단위 테스트는 모든 SQL 모킹을 요구하게 되어 사실상 작성 불가. CLAUDE.md §11 카드 스펙이 늘어날수록 함수도 비례해서 비대해진다.
-- **Remedy:** 5 phase를 작은 함수로 분리: `_make_expected_price(c, dist, market, budget_won)`, `_make_risk(c, rs)`, `_make_supply_stability(c)`, `_make_charts(dist)`. `enrich()`는 brn 추출 + 4개 SQL → loop에서 각 helper 호출 + DTO 조립으로 ~30줄까지 축소. 각 helper가 독립 테스트 대상이 됨.
+**Cognitive Overload / Dependency Disorder — 인라인 스타일 + 명령형 DOM 변이 (`e.currentTarget.style`) 패턴이 6+ 컴포넌트에 반복, Tailwind/shadcn 셋업이 무시됨**
+- **Symptom:** `frontend/src/index.css:2-4`에 `@import "tailwindcss"` + `"shadcn/tailwind.css"`가 설정되어 있고 `frontend/src/lib/utils.ts:1-5`에 `cn = twMerge(clsx(...))` 유틸까지 준비됨. 그런데 14개 신규 컴포넌트 어디에도 `className`이 사용되지 않음 — 모두 `style={{ ... }}` 인라인 객체. hover 효과는 `RecommendationCard.tsx:53-66`, `InputForm.tsx:197-208`, `Header.tsx:125-132`, `KpiGrid.tsx:89-96` 등에서 `onMouseEnter={(e) => { e.currentTarget.style.background = '...'; e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '...' }}` 명령형 DOM 변이. RecommendationCard 한 카드의 mouse handler가 4개 속성을 직접 셋팅.
+- **Source:** Ousterhout — *A Philosophy of Software Design*, Strategic vs Tactical; Hunt & Thomas — *Pragmatic Programmer*, Orthogonality; Fowler — *Refactoring*, Long Method
+- **Consequence:** (a) 컴포넌트 render body가 200~300줄로 비대해 변경 시 인지부하 큼 — InputForm 300줄, Header 285줄, RecommendationCard 217줄 모두 80%가 인라인 style. (b) hover 동작이 stateful — `selected/inCompare` 상태가 mouseLeave 도중 바뀌면 잘못된 boxShadow 복원 (현재 `RecommendationCard.tsx:60-65`는 `if (!selected && !inCompare)` 가드를 두지만 race condition 잠복). (c) 디자인 토큰 (primary `#4f46e5`, hover `#4338ca`, soft `#eef2ff`) — `index.css:14-16`에 이미 CSS variable로 정의되어 있는데 컴포넌트는 hex literal로 반복. 다크모드/리브랜딩 시 grep로 수십 군데 변경 필요. CSS `:hover` 의사클래스 또는 Tailwind `hover:bg-primary` 한 줄로 끝날 코드.
+- **Remedy:** (a) hover 핸들러 전부 삭제 + CSS `:hover` (또는 Tailwind `hover:`)로 교체 — 즉시 ~400줄 감소 예상. (b) `--color-primary` 등 이미 정의된 CSS variable을 `var(--color-primary)`로 사용. (c) RecommendationCard / DetailPanel / InputForm 같이 큰 카드는 Tailwind `className="bg-white rounded-xl shadow-sm hover:shadow-md transition"`로 치환. 한 컴포넌트 시범 변환 후 패턴 정착시키기.
 
-**Dependency Disorder — `psycopg2.connect()`가 한 `recommend()` 호출당 8회 + connect/cursor 보일러플레이트 7곳 복붙**
-- **Symptom:** `pipeline/recommend_v2.py`에서 `psycopg2.connect(dsn)` 호출이 `retrieve` (line 94), `_market_baseline` (124), `_brn_rate_distribution` (156), `_brn_risk_signals` (183), `_brn_recent_awards` (206), `_precedents` (234), `compute_kpi` (477), `_cutoff` (522) — 8개 helper에서 각각 새 connection을 연다. 각 helper는 `with psycopg2.connect(dsn) as conn: with conn.cursor(...) as cur: ...` 동일 패턴을 복사.
-- **Source:** Martin — *Clean Architecture*, DIP; Hunt & Thomas — *Pragmatic Programmer*, DRY; Ousterhout — *A Philosophy of Software Design*, Ch. 5: Information Leakage
-- **Consequence:** (a) 한 요청당 connect 8회 = local Postgres에서 80~240ms 오버헤드 — 사용자가 인지할 정도. 운영 VM(클라우드)에서 RTT 증가하면 더 심함. (b) helper 간 트랜잭션 보장 없음 — `_market_baseline` 호출 시점과 `_brn_rate_distribution` 시점 사이 ingest가 중간에 들어오면 일관성 깨짐 (현재 주 1회 batch라 실무에서는 잘 안 일어나지만, Phase 3 자동화 시 위험). (c) "DSN을 어떻게 다루는가"라는 결정이 8군데 분산 — Connection Pool 도입 시 8군데 모두 수정 필요. (d) DB 연결 자체가 모든 helper의 도메인 로직과 섞여 테스트 시 모킹 표면이 8배.
-- **Remedy:** `_DbExec` 헬퍼 또는 `with_conn(dsn) as conn` context manager 하나를 두고 helper 함수들이 `conn`을 인자로 받도록 변경. `recommend()`가 entry point에서 한 번만 `psycopg2.connect`해서 모든 helper에 전달. 이상적으로는 last review에서 제안한 `PoolRepository` Protocol을 확장한 `RecommendQueries` Protocol 하나에 8개 SQL을 메소드로 묶고, 구현체가 connection 수명을 책임지는 구조.
+**Knowledge Duplication — Tier / SR 뱃지 / 등급 색상 dict가 4개 컴포넌트에 동일 복제**
+- **Symptom:** 같은 `{A: '#dcfce7/#15803d', B: '#dbeafe/#1e40af', C: '#f1f5f9/#475569'}` 색상 세트가 `RecommendationCard.tsx:174-178` (TierBadge)와 `DetailPanel.tsx:171-175` (TierTag)에 동일 정의. SR 색상 (`여성기업: #fce7f3/#be185d`, `장애인기업: #fef3c7/#92400e`, `사회적기업: #d1fae5/#065f46`)도 두 곳 (`RecommendationCard.tsx:196-200` BadgeChip + `DetailPanel.tsx:192-196` SrTag)에 똑같이. 위험등급 색상은 `RiskAndStability.tsx:12-17`에 또 다른 4-키 dict (낮음/보통/주의/미확인). `frontend/src/lib/utils.ts:39-46`엔 `badgeKey()` 함수만 있고 색상 정의는 없음.
+- **Source:** Hunt & Thomas — *Pragmatic Programmer*, DRY; Fowler — *Refactoring*, Duplicate Code; Brooks — *The Mythical Man-Month*, Conceptual Integrity
+- **Consequence:** "B등급 색상을 더 진하게" 같은 변경이 두 군데 동시 수정 필요. SR 뱃지 한 종류 추가 (예: 자활기업, CLAUDE.md §1이 명시한 분류) 시 두 dict literal에 키 추가 누락하면 카드에서는 정의된 색, 디테일 패널에서는 디폴트 보라색이 나오는 시각적 불일치 — 같은 업체가 화면 두 곳에서 다른 색으로 표시. RecommendationCard와 DetailPanel은 같은 BRN의 같은 뱃지를 동시에 보여주는 위치라 시각적 일관성이 더 중요.
+- **Remedy:** `frontend/src/lib/badges.ts` 한 모듈에 `TIER_COLORS`, `SR_BADGE_COLORS`, `RISK_GRADE_COLORS` 상수 정의 + `<TierBadge tier={...}/>` 공용 컴포넌트로 추출. 컴포넌트 5개에서 import 한 줄로 끝. 더 발전형: Tailwind 토큰 (`bg-tier-a`, `text-tier-a`) + `tailwind.config`에 색상 등록.
 
-**Hyrum's Law / Information Leakage — `RETRIEVE_SQL.format(sr_clause=...)` SQL 동적 합성 패턴**
-- **Symptom:** `pipeline/recommend_v2.py:93` — `sql = RETRIEVE_SQL.format(sr_clause=_build_sr_clause(sr_filter))`. `_build_sr_clause` (lines 81-86)는 현재 고정 리터럴(`"AND mcs.female_ceo_flag"` 등)만 반환하므로 SQL injection은 없지만, `.format()`이 SQL 텍스트와 parameterized bind(`%(prefix4)s`, `%(name_regex)s`)와 같은 쿼리 안에 혼재.
-- **Source:** Winters et al. — *Software Engineering at Google*, Ch. 1: Hyrum's Law; Ousterhout — *A Philosophy of Software Design*, Ch. 5: Information Hiding
-- **Consequence:** 다음 contributor가 "지역 필터도 추가하자"며 `_build_sr_clause`에 `f"AND region='{sr_filter['region']}'"`을 추가하는 순간 classic SQL injection. 코드베이스가 가르치는 패턴이 "SQL은 `.format()`으로 조립한다"가 됐기 때문에 실수의 비용이 매우 낮다. 또한 IDE/lint가 SQL injection을 경고할 수단이 거의 없음 (psycopg2 cursor.execute에 들어가기 전 string concatenation).
-- **Remedy:** 가변 절은 항상 placeholder + bind variable 또는 `psycopg2.sql.SQL/Identifier/Composed`로 작성. 현재의 `sr_clause`는 boolean 인덱스 키 3개로 고정이므로, `sql`을 그대로 두고 WHERE에 `AND (NOT %s OR mcs.female_ceo_flag)` 식 트릭으로 binds만 추가하면 동적 합성 자체가 사라짐. 또는 `psycopg2.sql.Composed([SQL("AND mcs.female_ceo_flag") if ...])`. 어느 쪽이든 `.format()`은 SQL 본문 영역에서 추방.
+**Cognitive Overload — `Dashboard()` (App.tsx) 245줄에 6 useState + 3 useEffect + 파생 상태 + 3-column grid JSX 혼재**
+- **Symptom:** `frontend/src/App.tsx:20-246` 한 함수에 (i) settings localStorage hooks 3개 (line 22-24), (ii) 입력 상태 3개 (selectedKeyword/srFilter/budget, line 35-41), (iii) 결과 상태 3개 (selectedBrn/compareMode/compareSet, line 44-46), (iv) `useKeywords`/`useRecommend` (line 49-50), (v) auto-select effects 2개 (line 53-65 + 79-83), (vi) handleSubmit/handleToggleCompare/budgetMillion/compliance 파생 (line 67-113), (vii) 3-column grid JSX (line 115-244). 50줄 가이드의 5배.
+- **Source:** Fowler — *Refactoring*, Long Method; McConnell — *Code Complete*, Ch. 7; Ousterhout — *A Philosophy of Software Design*, Shallow Module
+- **Consequence:** 새 입력 필드 한 개 추가 (예: 향후 "지역 필터") = 같은 함수 안에서 useState + handler + JSX + 자동 추천 effect deps + InputForm props 모두 동시 수정. compareMode와 selectedBrn의 상호배제 로직이 JSX 안에 ternary로 녹아있어 (line 219-242) 변경 시 회귀 위험. 단위 테스트 작성 사실상 불가 — 모든 hook을 mocking. CLAUDE.md §11이 v2.1, v2.2, v3로 카드 항목/필터를 늘려갈 계획이라 이 함수는 빠르게 더 길어질 궤적.
+- **Remedy:** (a) `useDashboardState()` custom hook으로 6 useState + 3 effect를 추출 → Dashboard는 view + wiring만. (b) `<RightColumn>` 컴포넌트로 `compareMode ? <CompareTable> : <DetailPanel>` 분기를 격리. (c) `<MainColumn>`로 추천 결과 영역 분리. Dashboard 본문이 ~50줄까지 축소 가능.
 
-**Domain Model Distortion — `recommend()`가 `dict[str, Any]` 반환, 강타입 `RecommendV2Response`와 비연결**
-- **Symptom:** `pipeline/recommend_v2.py:530` `def recommend(req) -> dict[str, Any]`. `api/schemas.py:219` `class RecommendV2Response(BaseModel)`이 같은 모양을 강타입으로 정의하지만 둘 사이에 컴파일 타임 연결 없음. `enrich()` (line 420-442)가 dict literal로 21개 필드를 직접 build, FastAPI가 응답 시점에 Pydantic으로 검증.
-- **Source:** Evans — *Domain-Driven Design*, Ubiquitous Language; Martin — *Clean Architecture*, LSP의 정신 (계약 일관성); Fowler — *Refactoring*, Data Class
-- **Consequence:** producer가 필드 하나를 빠뜨리거나 오타 (`expected_price` vs `excpected_price`)를 내도 mypy/IDE가 잡지 못한다. 발견은 "production 응답이 422" 또는 "frontend에서 undefined" 시점. CLAUDE.md §11이 명시한 응답 스키마 11개 필드가 dict literal에 박혀 있어 schema가 진실의 근원이 아니다.
-- **Remedy:** `recommend()` 시그니처를 `-> RecommendV2Response`로 바꾸고 내부에서 dataclass / Pydantic 모델을 직접 build. `enrich()` 또한 `list[RecommendationV2Item]`을 반환. FastAPI가 `RecommendV2Response`를 응답 모델로 그대로 사용 가능 (`@app.post(..., response_model=RecommendV2Response)`).
+**Hyrum's Law — ComplianceBar의 "상위 K" 표시가 top_k 설정과 무관하게 항상 5**
+- **Symptom:** `frontend/src/components/ComplianceBar.tsx:74` — `상위 ${compliance.sr_in_top_k + (5 - srInK > 0 ? (5 - srInK) : 0)}개`. 산식을 풀면 `srInK ≤ 5`인 모든 경우에 결과가 정확히 5 (예: srInK=2 → 2+3=5, srInK=0 → 0+5=5, srInK=5 → 5+0=5). `Header.tsx:17`의 `TOPK_OPTIONS = [3, 5, 10]`을 사용자가 3 또는 10으로 바꿔도 항상 "상위 5"로 표시.
+- **Source:** Winters et al. — *Software Engineering at Google*, Hyrum's Law; McConnell — *Code Complete*, Magic Numbers; Fowler — *Refactoring*, 의도가 가려진 산식
+- **Consequence:** 사용자가 top_k=3로 좁히면 카드는 3개인데 ComplianceBar는 "상위 5개 중 정책 인증 N개"라고 거짓 표시 → 즉시 신뢰 의심. top_k=10이면 "상위 5"로 표시 + srInK가 6 이상이면 srInK 그대로 표시 (분기점이 의미 없는 곳에 위치). 답이 명확한 값(`recs.length` 또는 `topK` prop)을 obscure 산식으로 계산.
+- **Remedy:** `top_k` (또는 `result.recommendations.length`)를 prop으로 받아 그대로 표시: `상위 ${topK}개 후보 중 정책 인증 기업 ${srInK}개`. 현재 산식 삭제. App.tsx에서 `<ComplianceBar topK={topK} ... />`로 전달.
 
-**Knowledge Duplication — SR 법정 floor가 4 군데에 다른 표기로 박혀 있음**
-- **Symptom:** 같은 "사회적 가치 우선구매 촉진법 제7조 20%" 값이 4 위치에 등장 — `pipeline/scoring.py:42` `SR_LEGAL_FLOOR = 0.20`, `pipeline/ranker.py:25` `SR_LEGAL_FLOOR = 0.20`, `api/schemas.py:10` `Field(ge=0.20)`, `pipeline/recommend_v2.py:516-517` `obligation_threshold_pct: 20.0` + `obligation_met: pct >= 20.0`. 같은 법조항이 0.20 (가중치 fraction) vs 20.0 (퍼센트)로 단위까지 다름.
-- **Source:** Hunt & Thomas — *Pragmatic Programmer*, DRY: Single Source of Truth
-- **Consequence:** 법령 개정 시 4 곳 + Pydantic Field literal까지 수정 필요. 단위가 달라 `0.20` 검색만으로는 모두 못 찾는다 — `20.0`도 검색해야 함. 현재 `SR_LEGAL_FLOOR = 0.20`은 두 모듈에 중복 정의되어 있어 한 쪽만 0.18로 바뀌면 같은 입력이 한 API에서는 거절되고 다른 API에서는 통과한다.
-- **Remedy:** `pipeline/legal_constants.py` (또는 `pipeline/policy.py`) 한 모듈에 `SR_LEGAL_FLOOR_PCT: float = 20.0`, `SR_LEGAL_FLOOR_FRACTION: float = SR_LEGAL_FLOOR_PCT / 100.0` (혹은 그 역). 모든 모듈이 import만 하도록 변경. Pydantic `Field(ge=...)`는 literal 요구이므로 module-level constant를 `model_config`의 `json_schema_extra`로 넘기거나, 모델 빌드 시점에 검증하도록 우회.
+**Hyrum's Law — InputForm 카피가 "조건 변경 시 자동 반영"이라 약속하지만 실제로는 키워드 변경만 자동 반영**
+- **Symptom:** `frontend/src/components/InputForm.tsx:60-62` — 패널 상단에 `조건 변경 시 자동 반영` 카피. 그러나 `App.tsx:60-65` 자동 추천 useEffect의 deps가 `[selectedKeyword]`뿐. srFilter 토글이나 budget 변경은 사용자가 수동으로 line 211 `추천 재산출` 버튼을 눌러야 fetch.
+- **Source:** Winters et al. — Hyrum's Law (UI 카피 ≠ 행위); Evans — *Domain-Driven Design*, Ubiquitous Language
+- **Consequence:** 사용자가 "사회적기업" 체크 → 결과 카드가 그대로 → "버그?" 또는 (더 위험) "필터가 적용된 줄 알고" 이전 결과 기준으로 발주 결정. `liveCount`도 server에서 받은 KPI라 필터 토글에도 즉시 변하지 않으므로 이중으로 혼란. CLAUDE.md §11 "정책 필터 0~3개 — hard filter"라는 도메인 약속과 UI의 "자동 반영" 약속 둘 다 깨짐.
+- **Remedy:** 둘 중 하나 — (a) UI 카피를 정확하게: "변경 후 '추천 재산출'을 눌러주세요" (1줄 수정으로 끝). (b) effect deps 확장 + budget은 debounce: `useEffect(() => { handleSubmit() }, [selectedKeyword, srFilter])` + budget은 `useDebouncedValue(budget, 500)` 별도 effect. (a)가 가장 안전한 단기 해결.
 
 ### 🟢 Suggestion
 
-**Cognitive Overload — 도메인 임계가 모두 무명 매직 넘버**
-- **Symptom:** `_risk_grade` (line 245-253)의 `lost >= 3`, `ratio >= 0.30`, `recent_lost >= 2`, `top1 >= 3`; `_tier` (256-263)의 `>= 0.6`, `>= 0.3`; `_dormant_months`의 `30.4` (line 273); dormancy threshold `>= 24` (line 391); precedent budget `0.5x`/`1.5x` (line 239); compliance `20.0` (line 517).
-- **Source:** McConnell — *Code Complete*, Ch. 12: Magic Numbers
-- **Consequence:** CLAUDE.md §11 "리스크 등급 4단계" 표가 코드 내부 임계와 동기화되어 있는지 확인하려면 매번 코드와 docs를 대조 필요. 임계 변경(이번 분기 검토)이 docs 업데이트를 흔적 없이 빠뜨리기 쉽다.
-- **Remedy:** `pipeline/recommend_v2.py` 상단에 named constants — `RISK_LOST_HARD = 3`, `RISK_LOST_RATIO = 0.30`, `RISK_RECENT_LOST = 2`, `TIER_A_CUTOFF = 0.6`, `TIER_B_CUTOFF = 0.3`, `DORMANT_MONTHS = 24`, `PRECEDENT_BUDGET_LO = 0.5`, `PRECEDENT_BUDGET_HI = 1.5`, `MONTH_DAYS = 30.4`. CLAUDE.md §11 표를 docstring 형태로 같이 묶으면 single source 효과.
+**Knowledge Duplication — `Settings` (App.tsx) vs `SettingsState` (Header.tsx) 같은 모양의 인터페이스 두 번**
+- **Symptom:** `App.tsx:14-18`의 `interface Settings`와 `Header.tsx:5-9`의 `interface SettingsState`가 동일한 3-필드 (`sr_target: number`, `top_k: number`, `budget_unit: string`). `frontend/src/lib/types.ts`에 다른 도메인 타입은 모두 모여있는데 이 둘만 컴포넌트 파일 내부에 흩어져 있음.
+- **Source:** Hunt & Thomas — DRY; Evans — Ubiquitous Language
+- **Consequence:** 옵셔널 필드 추가 (예: `theme?: 'light' | 'dark'`) 시 두 곳 동시 수정. TypeScript가 mismatch를 catch해주긴 하지만, 같은 도메인 개념이 두 이름으로 존재하는 자체가 신규 contributor를 혼란시킨다.
+- **Remedy:** `frontend/src/lib/types.ts`에 `export interface DashboardSettings { sr_target: number; top_k: number; budget_unit: string }` 한 번 정의 후 두 컴포넌트가 import.
 
-**Silent Exception — `except Exception: pass` (`pipeline/recommend_v2.py:402`)**
-- **Symptom:** `g2b_age` 계산이 실패하면 조용히 `g2b_age = None`. `g2b_registered_at`이 미래 datetime이거나 잘못된 타입일 때 (mart 빌드 버그 등) 진단 흔적이 전혀 남지 않음.
-- **Source:** McConnell — *Code Complete*, Defensive programming pitfalls; *Pragmatic Programmer*, Topic 24: "Dead Programs Tell No Lies"
-- **Consequence:** 추천 카드의 "G2B 등록 X년" 표기가 임의로 비어 있어도 alert 없음 — 운영 데이터 quality 회귀가 들키지 않음.
-- **Remedy:** 최소 `logger.warning("g2b_age compute failed for brn=%s reg=%s", brn, reg, exc_info=True)`. 더 좋은 건 예외 종류를 명시 (`except (TypeError, ValueError)`)하고, 실제 unexpected는 그대로 raise.
+**Knowledge Duplication — `SR_OPTIONS = [15, 20, 30, 40, 50]`가 Header.tsx와 ComplianceBar.tsx에 동일 하드코딩**
+- **Symptom:** `Header.tsx:16` + `ComplianceBar.tsx:9` 동일 const. 게다가 (Critical #2 참조) 15는 법정 하한(20%) 미만으로 옵션 자체가 부적절.
+- **Source:** Hunt & Thomas — DRY; CLAUDE.md §11 + `pipeline/policy.py` (SR_LEGAL_FLOOR_PCT 단일 정의의 정신)
+- **Consequence:** 옵션 추가/삭제 시 두 곳 비대칭 위험. 또한 Python 쪽은 `SR_LEGAL_FLOOR_PCT` 단일 상수로 정리됐는데 frontend에는 같은 도메인 상수가 hardcoded duplicate.
+- **Remedy:** `frontend/src/lib/constants.ts`에 `export const SR_LEGAL_FLOOR_PCT = 20` + `export const SR_TARGET_OPTIONS = [SR_LEGAL_FLOOR_PCT, 30, 40, 50] as const` (15 제거). 코멘트로 "법정 하한 미만 옵션은 UI에 노출 금지 — pipeline/policy.py 와 동기화" 명시.
+
+**Coverage Illusion — frontend 14개 신규 컴포넌트 + 3개 hooks + utils — 0 tests**
+- **Symptom:** `find frontend -name "*.test.*"` 0건. `tests/` 디렉토리는 Python 전용 (`test_recommend_v2_pure.py` 1개). 가장 비결정적인 코드 (RadarSection의 `Math.random`, ComplianceBar의 5-고정 산식, App.tsx의 effect deps)도 검증 없음.
+- **Source:** Feathers — *Working Effectively with Legacy Code*, Ch. 1: 테스트 없는 코드 = legacy
+- **Consequence:** Critical #1 (Math.random)도 Critical #2 (compliance override)도 단순 unit/render test로 catch될 수 있는 회귀가 production까지 흘러들 위험. 이전 라운드에 지적된 Python `tests/test_recommend_v2_pure.py`는 작성됐지만 frontend는 같은 약속 없음.
+- **Remedy:** `vitest` + `@testing-library/react` 도입. 우선순위: (i) `RadarSection`의 결정성 (`Math.random` 제거 후 동일 입력 → 동일 출력 단언), (ii) `ComplianceBar` 표시 산식 (`topK`별 "상위 N" 표시 검증), (iii) `App.tsx`의 자동 추천 effect (selectedKeyword 변경에만 반응 / 다른 입력엔 미반응을 명시 검증).
 
 ---
 
-**Recommended fix order:** (1) Knowledge Duplication — `pipeline/scoring.py`/`pipeline/ranker.py` 통합이 다른 리팩토링의 전제; (2) `SR_LEGAL_FLOOR` 단일화 — 법령 변경 시 사고를 막는 가장 작은 PR; (3) `enrich()` 분해 + tests — 테스트 추가가 가능한 형태로 자르기; (4) Connection 통합 / SQL 합성 패턴 정리; (5) `recommend()` 강타입 반환; (6) 명명 상수 + 로깅 정리.
+**Recommended fix order:** (1) RadarSection `Math.random` 제거 + backend `axes` 노출 — 정부 도구로서 신뢰의 마지노선; (2) compliance 클라이언트 재계산 제거 + 15% 옵션 제거 — 법령 우회 통로 닫기; (3) ComplianceBar "상위 K" 산식 수정 + InputForm 카피 정정 — UI 거짓말 두 개 정리, 1줄씩이라 묶어서; (4) Tier/SR 색상 dict 단일화 + `lib/badges.ts` 추출; (5) hover handler 일괄 CSS화 → Dashboard 분해 (대형 리팩토링); (6) frontend 테스트 도입.
 
 ## Summary
 
-가장 시급한 건 룰 기반 추천 로직의 이중 구현 정리 — `RuleRanker`와 `scoring.py`가 같은 결정을 두 군데서 내리는 한 v2 swap point가 약속을 지키지 못한다. 그 다음은 connect 보일러플레이트 + SQL 합성 패턴 통합인데, 이건 last review의 DIP 권고(`PoolRepository`)와 합쳐 `RecommendQueries` Protocol 한 번에 푸는 게 가장 경제적. 직전 리뷰의 Coverage Illusion(테스트 0건)은 코드량이 ~1500줄 더 늘어나며 더 위험해진 채로 그대로 남아있음 — 본 라운드에서는 신규 발견에 집중했지만 trend 단어로 반영.
+가장 시급한 건 표시 계층의 두 거짓말 — `Math.random()`으로 만든 가짜 평가차트와, server의 법정 의무비율 판단을 client localStorage 토글로 덮어쓰는 compliance 재계산이다. 룰 엔진은 이전 라운드에서 잘 정리됐지만, 그 결과를 정부 사용자에게 노출하는 컴포넌트가 도메인 무결성을 일관되게 깨고 있어 의사결정 도구로서의 신뢰가 무너진다. 부수적으로 인라인 스타일 + 명령형 DOM 변이 패턴이 14개 컴포넌트에 자리잡았는데, 프로젝트가 이미 Tailwind/shadcn 셋업을 가지고도 사용하지 않는 상태 — 한 컴포넌트 시범 전환으로 패턴 정착이 빠를 것.

@@ -6,48 +6,50 @@ import {
   PolarRadiusAxis,
   ResponsiveContainer,
 } from 'recharts'
-import type { RecommendationV2Item } from '@/lib/types'
+import type { AxesV2, RecommendationV2Item } from '@/lib/types'
 
 interface Props {
   item: RecommendationV2Item
 }
 
-const AXIS_MAP: Record<string, string> = {
+const AXIS_ORDER: (keyof AxesV2)[] = [
+  'sr_diversity',
+  'track_record',
+  'price_competitiveness',
+  'supply_stability',
+]
+
+const AXIS_LABEL: Record<keyof AxesV2, string> = {
   supply_stability: '공급 안정',
   sr_diversity: 'SR',
   track_record: '실적',
   price_competitiveness: '가격',
 }
 
-const WEIGHT_MAP: Record<string, string> = {
-  supply_stability: '15%',
+const AXIS_WEIGHT: Record<keyof AxesV2, string> = {
   sr_diversity: '35%',
   track_record: '30%',
   price_competitiveness: '20%',
+  supply_stability: '15%',
+}
+
+function clamp01(v: number): number {
+  if (!Number.isFinite(v)) return 0
+  return Math.min(1, Math.max(0, v))
 }
 
 export function RadarSection({ item }: Props) {
-  const axes = ['sr_diversity', 'track_record', 'price_competitiveness', 'supply_stability']
+  const axes = item.axes
 
-  const radarData = axes.map((key) => ({
-    axis: AXIS_MAP[key] ?? key,
-    value: item.expected_price.point > 0
-      ? Math.min(1, Math.max(0, (item.rule_score + Math.random() * 0.1 - 0.05)))
-      : 0,
+  const radarData = AXIS_ORDER.map((key) => ({
+    axis: AXIS_LABEL[key],
+    value: clamp01(axes[key]),
   }))
 
-  // Use rule_score + weighted_segments if available (they come from the backend)
-  // Fall back to rule_score distribution
-  const segments = item as unknown as { weighted_segments?: Record<string, number> }
-  const ws = segments.weighted_segments
-
-  const legendRows = axes.map((key) => {
-    const val = ws?.[key] ?? item.rule_score * (key === 'sr_diversity' ? 1.2 : key === 'track_record' ? 1.1 : 0.8)
-    return {
-      label: `${AXIS_MAP[key]} (${WEIGHT_MAP[key]})`,
-      value: Math.min(1, Math.max(0, val)),
-    }
-  })
+  const legendRows = AXIS_ORDER.map((key) => ({
+    label: `${AXIS_LABEL[key]} (${AXIS_WEIGHT[key]})`,
+    value: clamp01(axes[key]),
+  }))
 
   return (
     <div>

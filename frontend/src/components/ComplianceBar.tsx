@@ -2,16 +2,14 @@ import type { ComplianceInfo } from '@/lib/types'
 
 interface Props {
   compliance: ComplianceInfo | null
-  srTarget: number
-  onSrTargetChange: (v: number) => void
+  topK: number
 }
 
-const SR_OPTIONS = [15, 20, 30, 40, 50]
-
-export function ComplianceBar({ compliance, srTarget, onSrTargetChange }: Props) {
+export function ComplianceBar({ compliance, topK }: Props) {
   if (!compliance) return null
 
-  const met = compliance.sr_pct_top_k >= srTarget
+  const met = compliance.obligation_met
+  const threshold = compliance.obligation_threshold_pct
   const srInK = compliance.sr_in_top_k
   const pct = compliance.sr_pct_top_k
 
@@ -46,38 +44,16 @@ export function ComplianceBar({ compliance, srTarget, onSrTargetChange }: Props)
             : '0 0 0 3px rgba(239,68,68,0.18)',
         }}
       />
-      <span>SR 의무비율 ≥</span>
-      <select
-        value={srTarget}
-        onChange={(e) => onSrTargetChange(Number(e.target.value))}
-        style={{
-          padding: '2px 7px',
-          border: '1px solid #86efac',
-          background: '#fff',
-          color: '#14532d',
-          borderRadius: 5,
-          fontSize: 11,
-          fontWeight: 700,
-          cursor: 'pointer',
-          fontFamily: 'inherit',
-          transition: 'all 0.15s',
-        }}
-      >
-        {SR_OPTIONS.map((v) => (
-          <option key={v} value={v}>
-            {v}%
-          </option>
-        ))}
-      </select>
+      <span>SR 의무비율 ≥ <b>{threshold.toFixed(0)}%</b> (법정)</span>
       <span>—</span>
       <b style={{ color: met ? '#14532d' : '#991b1b', fontWeight: 700 }}>
-        상위 {compliance.sr_in_top_k + (5 - srInK > 0 ? (5 - srInK) : 0)}개 후보 중 정책 인증 기업 {srInK}개 ({pct.toFixed(0)}%)
+        상위 {topK}개 후보 중 정책 인증 기업 {srInK}개 ({pct.toFixed(0)}%)
       </b>
       <span style={{ color: met ? '#15803d' : '#b91c1c' }}>
         {met ? '충족' : '미충족'}
       </span>
       <span style={{ marginLeft: 'auto', fontSize: 10, color: '#9ca3af' }}>
-        기관 설정 기준 적용
+        서버 판정 기준
       </span>
     </div>
   )

@@ -1,5 +1,6 @@
 import type { RiskInfo, SupplyStability } from '@/lib/types'
 import { riskLabel } from '@/lib/utils'
+import { RISK_GRADE_COLORS } from '@/lib/badges'
 
 interface Props {
   risk: RiskInfo
@@ -8,13 +9,7 @@ interface Props {
 
 export function RiskAndStability({ risk, stability }: Props) {
   const grade = riskLabel(risk.grade)
-
-  const pillStyle: Record<string, React.CSSProperties> = {
-    낮음: { background: '#dcfce7', color: '#15803d', boxShadow: 'inset 0 0 0 1px rgba(34,197,94,0.25)' },
-    보통: { background: '#fef3c7', color: '#92400e', boxShadow: 'inset 0 0 0 1px rgba(217,119,6,0.25)' },
-    주의: { background: '#fee2e2', color: '#991b1b', boxShadow: 'inset 0 0 0 1px rgba(220,38,38,0.25)' },
-    미확인: { background: '#f1f5f9', color: '#475569', boxShadow: 'inset 0 0 0 1px #e2e8f0' },
-  }
+  const pillStyle = RISK_GRADE_COLORS[grade] ?? RISK_GRADE_COLORS.미확인
 
   const totalAmt = stability.award_total_amt
   const totalAmtLabel =
@@ -50,7 +45,7 @@ export function RiskAndStability({ risk, stability }: Props) {
                 borderRadius: 999,
                 fontSize: 11,
                 fontWeight: 700,
-                ...(pillStyle[grade] ?? pillStyle.미확인),
+                ...pillStyle,
               }}
             >
               위험등급: {grade}
