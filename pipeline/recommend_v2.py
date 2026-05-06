@@ -219,6 +219,79 @@ def _brn_rate_distribution(conn, brns: list[str]) -> dict[str, dict]:
         return {r["brn"]: dict(r) for r in cur.fetchall()}
 
 
+# ── 유사 규모 한정 분포 (외삽 방지) ─────────────────────────────────
+PRICE_SCALE_BAND_LO: float = 0.5    # 입력 예산 × 0.5 ~
+PRICE_SCALE_BAND_HI: float = 1.5    # 입력 예산 × 1.5
+
+
+def _brn_rate_distribution_at_scale(
+    conn, brns: list[str], budget_won: int,
+) -> dict[str, dict]:
+    """BRN의 유사 규모 (예산 ±50%) 거래 분포만 추출.
+
+    n_samples_at_scale ≥ 3 이면 BRN 데이터로 신뢰성 있는 점/구간 산출.
+    n=0 이면 외삽 위험 시그널 — 시장 fallback 또는 is_extrapolated 표시.
+    """
+    if not brns:
+        return {}
+    lo = int(budget_won * PRICE_SCALE_BAND_LO)
+    hi = int(budget_won * PRICE_SCALE_BAND_HI)
+    sql = """
+    SELECT a.bidwinnr_brn AS brn,
+           COUNT(*) AS n,
+           AVG(a.sucsfbid_rate) AS mean,
+           PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY a.sucsfbid_rate) AS q25,
+           PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY a.sucsfbid_rate) AS q75,
+           STDDEV(a.sucsfbid_rate) AS std
+    FROM stg_award a
+    JOIN stg_bid_notice b USING (bid_ntce_no, bid_ntce_ord)
+    WHERE b.agency_tier IN ('env_corp', 'env_domain')
+      AND a.bidwinnr_brn = ANY(%s)
+      AND a.sucsfbid_rate IS NOT NULL
+      AND a.sucsfbid_amt BETWEEN %s AND %s
+    GROUP BY 1
+    """
+    with _dict_cursor(conn) as cur:
+        cur.execute(sql, (brns, lo, hi))
+        return {r["brn"]: dict(r) for r in cur.fetchall()}
+
+
+def _market_baseline_at_scale(
+    conn, prefix4: list[str], name_regex: str, budget_won: int,
+) -> dict:
+    """입력 예산 ±50% 범위 시장 baseline (BRN 데이터 부족 시 fallback)."""
+    lo = int(budget_won * PRICE_SCALE_BAND_LO)
+    hi = int(budget_won * PRICE_SCALE_BAND_HI)
+    sql = """
+    SELECT
+      COUNT(*) AS n,
+      AVG(a.sucsfbid_rate)  AS mean,
+      PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY a.sucsfbid_rate) AS q25,
+      PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY a.sucsfbid_rate) AS q75,
+      STDDEV(a.sucsfbid_rate) AS std
+    FROM stg_award a
+    JOIN stg_bid_notice b USING (bid_ntce_no, bid_ntce_ord)
+    WHERE b.agency_tier IN ('env_corp', 'env_domain')
+      AND LEFT(b.dtil_prdct_clsfc_no, 4) = ANY(%(prefix4)s)
+      AND b.dtil_prdct_clsfc_no_nm ~ %(name_regex)s
+      AND a.sucsfbid_rate IS NOT NULL
+      AND a.sucsfbid_amt BETWEEN %(lo)s AND %(hi)s
+    """
+    with _dict_cursor(conn) as cur:
+        cur.execute(sql, {
+            "prefix4": prefix4, "name_regex": name_regex,
+            "lo": lo, "hi": hi,
+        })
+        r = cur.fetchone() or {}
+    return {
+        "n": int(r.get("n") or 0),
+        "mean": float(r["mean"]) if r.get("mean") is not None else None,
+        "q25":  float(r["q25"])  if r.get("q25")  is not None else None,
+        "q75":  float(r["q75"])  if r.get("q75")  is not None else None,
+        "std":  float(r["std"])  if r.get("std")  is not None else None,
+    }
+
+
 def _brn_risk_signals(conn, brns: list[str]) -> dict[str, dict]:
     if not brns:
         return {}
@@ -387,25 +460,88 @@ def _to_million(amt: Optional[int]) -> Optional[int]:
     return round(amt / 1_000_000) if amt is not None else None
 
 
-def _make_expected_price(budget_won: int, dist: dict, market: dict) -> dict:
-    """예상가 점추정/구간/시장편차. dist=BRN 분포, market=prefix4 baseline."""
-    n = int(dist.get("n") or 0)
-    rate = dist.get("mean") if n >= 1 else market.get("mean")
-    point = int(budget_won * float(rate) / 100.0) if rate is not None else budget_won
-    if n >= 3 and dist.get("q25") is not None:
-        q25 = int(budget_won * float(dist["q25"]) / 100.0)
-        q75 = int(budget_won * float(dist["q75"]) / 100.0)
-        sigma = float(dist["std"]) if dist.get("std") is not None else None
-        diff = float(dist["mean"]) - market["mean"] if market.get("mean") is not None else None
+def _make_expected_price(
+    budget_won: int,
+    dist: dict,             # BRN 전체 거래 분포
+    dist_at_scale: dict,    # BRN 유사 규모 (예산 ±50%) 분포
+    market: dict,           # 시장 (전체 prefix4)
+    market_at_scale: dict,  # 시장 (유사 규모)
+) -> dict:
+    """예상가 추정 — 유사 규모 한정 + 외삽 경고.
+
+    Fallback 우선순위:
+      1. BRN 유사 규모 n≥3 → 점/구간/변동폭 모두 산출 (가장 정확)
+      2. BRN 유사 규모 n=1~2 → 점추정만, 구간 X
+      3. 시장 유사 규모 n≥3 → 시장 평균으로 점추정 (BRN 외삽 방지)
+      4. BRN 전체 평균 (n≥3) → 외삽 경고 표시
+      5. 시장 전체 평균 → 마지막 fallback
+      6. 데이터 0 → 예산 그대로
+
+    is_extrapolated=True: BRN 유사 규모 거래 부재 시 — 운영자에게 신뢰도 낮음 알림.
+
+    [Phase 향후 swap point — 회귀 모델 도입 시 이 함수만 교체]
+    """
+    n_scale = int(dist_at_scale.get("n") or 0)
+    n_full = int(dist.get("n") or 0)
+    n_market_scale = int(market_at_scale.get("n") or 0)
+
+    extrapolated = False
+    sigma = None
+    q25_rate = q75_rate = None
+
+    if n_scale >= 3:
+        # 1. BRN 유사 규모 — 가장 정확
+        rate = dist_at_scale["mean"]
+        q25_rate = dist_at_scale.get("q25")
+        q75_rate = dist_at_scale.get("q75")
+        sigma = dist_at_scale.get("std")
+        ref_market_mean = market_at_scale.get("mean") or market.get("mean")
+    elif n_scale >= 1:
+        # 2. BRN 유사 규모 1~2건 — 점추정만
+        rate = dist_at_scale["mean"]
+        ref_market_mean = market_at_scale.get("mean") or market.get("mean")
+    elif n_market_scale >= 3:
+        # 3. 시장 유사 규모 fallback — BRN 외삽 방지
+        rate = market_at_scale["mean"]
+        ref_market_mean = market_at_scale["mean"]
+        extrapolated = True
+    elif n_full >= 3:
+        # 4. BRN 전체 평균 — 외삽 경고
+        rate = dist["mean"]
+        ref_market_mean = market.get("mean")
+        extrapolated = True
+    elif market.get("mean") is not None:
+        # 5. 시장 전체 평균
+        rate = market["mean"]
+        ref_market_mean = market["mean"]
+        extrapolated = True
     else:
-        q25 = q75 = sigma = diff = None
+        # 6. 데이터 부재
+        rate = None
+        ref_market_mean = None
+        extrapolated = True
+
+    point = int(budget_won * float(rate) / 100.0) if rate is not None else budget_won
+    q25 = int(budget_won * float(q25_rate) / 100.0) if q25_rate is not None else None
+    q75 = int(budget_won * float(q75_rate) / 100.0) if q75_rate is not None else None
+    market_diff = (
+        float(rate) - float(ref_market_mean)
+        if rate is not None and ref_market_mean is not None and not extrapolated
+        else None
+    )
+
+    n_used = n_scale if n_scale > 0 else (n_market_scale if n_market_scale >= 3 else n_full)
+
     return {
-        "point": point, "point_million": _to_million(point),
+        "point": point,
+        "point_million": _to_million(point),
         "q25": q25, "q75": q75,
         "q25_million": _to_million(q25), "q75_million": _to_million(q75),
         "sigma_pp": round(sigma, 2) if sigma is not None else None,
-        "market_diff_pp": round(diff, 2) if diff is not None else None,
-        "n_samples": n,
+        "market_diff_pp": round(market_diff, 2) if market_diff is not None else None,
+        "n_samples": n_used,
+        "n_samples_overall": n_full,
+        "is_extrapolated": extrapolated,
     }
 
 
@@ -456,7 +592,9 @@ def _make_charts(dist: dict) -> dict:
 
 
 def _build_recommendation_item(
-    rank_pos: int, c: dict, budget_won: int, market: dict, dist: dict,
+    rank_pos: int, c: dict, budget_won: int,
+    market: dict, market_at_scale: dict,
+    dist: dict, dist_at_scale: dict,
     rs: dict, awards_for_brn: list[dict], precedents: list[dict],
 ) -> RecommendationV2Item:
     """단일 카드 조립 — Pydantic 모델 직접 반환 (compile-time 계약)."""
@@ -474,7 +612,9 @@ def _build_recommendation_item(
             last_award_at=c["last_award_at"].isoformat() if c.get("last_award_at") else None,
             lost_count=risk_info["lost_count"],
         ),
-        expected_price=ExpectedPrice(**_make_expected_price(budget_won, dist, market)),
+        expected_price=ExpectedPrice(**_make_expected_price(
+            budget_won, dist, dist_at_scale, market, market_at_scale,
+        )),
         risk=RiskInfo(**risk_info),
         supply_stability=SupplyStability(**_make_supply_stability(c, brn)),
         recent_awards=[AwardItemV2(**a) for a in awards_for_brn],
@@ -499,15 +639,19 @@ def enrich(
     brns = [c["brn"] for c in top_k]
     budget_won = budget_million * 1_000_000
     market = _market_baseline(conn, kf.prefix4, kf.name_regex)
+    market_at_scale = _market_baseline_at_scale(conn, kf.prefix4, kf.name_regex, budget_won)
     rate_dist = _brn_rate_distribution(conn, brns)
+    rate_dist_at_scale = _brn_rate_distribution_at_scale(conn, brns, budget_won)
     risks = _brn_risk_signals(conn, brns)
     awards = _brn_recent_awards(conn, brns)
     precedents = _precedents(conn, kf.prefix4, kf.name_regex, budget_won)
 
     return [
         _build_recommendation_item(
-            rank_pos, c, budget_won, market,
-            rate_dist.get(c["brn"], {}), risks.get(c["brn"], {}),
+            rank_pos, c, budget_won,
+            market, market_at_scale,
+            rate_dist.get(c["brn"], {}), rate_dist_at_scale.get(c["brn"], {}),
+            risks.get(c["brn"], {}),
             awards.get(c["brn"], []), precedents,
         )
         for rank_pos, c in enumerate(top_k, 1)

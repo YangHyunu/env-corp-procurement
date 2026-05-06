@@ -128,7 +128,9 @@ class ExpectedPrice(BaseModel):
     q75_million: int | None = None
     sigma_pp: float | None = None
     market_diff_pp: float | None = None
-    n_samples: int
+    n_samples: int                   # 추정에 사용된 표본 (유사 규모 우선)
+    n_samples_overall: int = 0       # BRN 전체 거래 건수 (참고)
+    is_extrapolated: bool = False    # BRN 유사 규모 거래 부재 → 외삽 경고
 
 
 class RiskInfo(BaseModel):

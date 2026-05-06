@@ -6,11 +6,16 @@ interface Props {
 }
 
 export function PriceBar({ price, kpi }: Props) {
-  const { point_million, q25_million, q75_million, n_samples, sigma_pp, market_diff_pp } = price
+  const {
+    point_million, q25_million, q75_million,
+    n_samples, n_samples_overall, sigma_pp, market_diff_pp,
+    is_extrapolated,
+  } = price
   const marketAvg = kpi?.avg_expected_price_million ?? null
 
   const hasIQR = n_samples >= 3 && q25_million != null && q75_million != null
-  const isSparse = !hasIQR
+  const isExtrapolated = !!is_extrapolated
+  const isSparse = !hasIQR && !isExtrapolated
 
   // Determine axis range
   const values = [point_million, q25_million, q75_million, marketAvg].filter(
@@ -48,19 +53,27 @@ export function PriceBar({ price, kpi }: Props) {
         >
           예상 가격
         </h3>
-        {/* (나) 표본 안내 배지 */}
+        {/* 표본 / 외삽 안내 배지 */}
         <span
           style={{
             fontSize: 10,
             fontWeight: 700,
             padding: '3px 9px',
             borderRadius: 999,
-            background: isSparse ? '#fef3c7' : '#f1f5f9',
-            color: isSparse ? '#92400e' : '#475569',
-            boxShadow: isSparse ? 'inset 0 0 0 1px rgba(217,119,6,0.25)' : 'none',
+            background: isExtrapolated ? '#fee2e2' : isSparse ? '#fef3c7' : '#f1f5f9',
+            color: isExtrapolated ? '#991b1b' : isSparse ? '#92400e' : '#475569',
+            boxShadow: isExtrapolated
+              ? 'inset 0 0 0 1px rgba(220,38,38,0.3)'
+              : isSparse
+                ? 'inset 0 0 0 1px rgba(217,119,6,0.25)'
+                : 'none',
           }}
         >
-          {isSparse ? `표본 ${n_samples}건 — 점추정만` : `표본 ${n_samples}건`}
+          {isExtrapolated
+            ? `거래 규모 외삽 — 신뢰도 낮음`
+            : isSparse
+              ? `표본 ${n_samples}건 — 점추정만`
+              : `표본 ${n_samples}건`}
         </span>
       </div>
 
@@ -234,9 +247,11 @@ export function PriceBar({ price, kpi }: Props) {
       </div>
 
       <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8, fontWeight: 500 }}>
-        {hasIQR
-          ? `과거 ${n_samples}건 낙찰 기준 · 구간/변동폭 산출 가능`
-          : `표본 부족 (n<3) — 구간·변동폭 산출 불가, 점추정만 표시`}
+        {isExtrapolated
+          ? `이 업체 유사 규모 거래 부재 — 시장 평균/전체 평균으로 추정 (BRN 전체 ${n_samples_overall ?? 0}건)`
+          : hasIQR
+            ? `과거 유사 규모 ${n_samples}건 기준 · 구간·변동폭 산출 가능`
+            : `유사 규모 ${n_samples}건 — 구간·변동폭 산출 불가, 점추정만 표시`}
       </div>
     </div>
   )

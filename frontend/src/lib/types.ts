@@ -23,6 +23,8 @@ export interface ExpectedPrice {
   sigma_pp: number | null
   market_diff_pp: number | null
   n_samples: number
+  n_samples_overall?: number
+  is_extrapolated?: boolean
 }
 
 export interface RiskInfo {
