@@ -501,3 +501,52 @@ RecommendV2Response:
   }
 }
 ```
+
+---
+
+## 13. ML 통합 로드맵
+
+### 추천 시스템 = 3가지 ML 작업 합성
+
+| 작업 | 타입 | 답하는 질문 | 현재 상태 |
+|---|---|---|---|
+| **가격 예측** | 회귀 (regressor) | "이 BRN이 얼마에 낙찰받을까?" | 룰 (유사 규모 평균 + 외삽 경고) — 팀원 regressor 예정 |
+| **낙찰 확률** | 분류 (classifier) | "이 BRN이 진짜 낙찰받을 확률?" | LGBM 학습됨 — 운영 미사용 |
+| **추천 (랭킹)** | 순위 | "5명 중 누구를 1순위?" | 룰베이스 4축 가중합 (`RuleRanker`) |
+
+### Phase 1 (현재) — 모두 룰
+- 가격: BRN 유사 규모 (예산 ±50%) 평균 낙찰률. 부재 시 시장 fallback + `is_extrapolated` 경고
+- 확률: 점수에 묻혀 있음 (분류 미통합)
+- 랭킹: 4축 가중합 (sr_diversity 0.35 + track_record 0.30 + price 0.20 + supply 0.15) + SR floor demote
+
+### Phase 2 (단기 — 팀원 작업 + 통합)
+1. **가격**: regressor 모델 도입 → `_make_expected_price()` 한 함수만 교체
+2. **확률**: `LGBMRanker` 클래스 (synthetic bid → predict_proba). `RecommendationV2Item.ml_score` 필드에 채움
+3. 카드 UI: ml_score 보조 배지 (정상/이견 신호)
+
+### Phase 3 (장기) — Multi-objective ranker
+가격·확률·SR·리스크 병합 종합 점수. 가중치를 데이터로 학습 (현재는 운영팀 회의 결과 임의값).
+
+### 룰베이스 4축 가중합 — 작동 예시 (펌프, 후보 5)
+```
+BRN A 한마음 (낙찰 14, SR 3, 낙찰률 87%)
+  공급 0.95×0.15 + SR 1.00×0.35 + 실적 0.95×0.30 + 가격 0.50×0.20 = 0.88 → 1위
+BRN D 신한 (낙찰 6, SR 0, 낙찰률 86%)
+  raw 0.45 → SR floor demote -1.0 → 0.00 → 5위
+```
+
+### LGBM 학습 결과 (참고용 자산)
+- 학습 데이터: `mart_features_at_bid` (343k row, 449 winners, prefix_warm pool)
+- AUC 0.858 · HR@5 41% · HR@10 56% · NDCG@5 0.30 · SR Cov@5 8.3%
+- 산출물: `artifacts/lgbm_baseline.txt`
+- 한계: (실제 공고 + BRN) 입력 학습 → 사전탐색 모드(공고 부재)에 직접 투입 X. Phase 2 swap 후보.
+
+### 스왑 포인트 (코드 기준)
+- `pipeline.ranker.Ranker` Protocol — `RuleRanker` ↔ `LGBMRanker` swap
+- `pipeline.recommend_v2._make_expected_price()` — regressor swap (함수 시그니처 유지)
+- `api.schemas.RecommendationV2Item` — `ml_score: float | None` 필드 미리 자리 잡힘
+
+### 한계 / 위험
+- 학습 데이터 양 빈약 (positive 449건) — DeepFM 같은 deep model 어려움
+- prefix_warm pool 좁음 — cold-start BRN 처리 X
+- synthetic bid 노이즈 — 실제 발주 아니라 공고 측 피처 가정값 사용
