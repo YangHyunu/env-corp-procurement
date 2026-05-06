@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>ECO 추천 대시보드 v2.1 — UX 개선안</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+
+  :root {
+    --bg: #f4f5f7;
+    --bg-soft: #fafbfc;
+    --surface: #ffffff;
+    --line: #ebedf0;
+    --line-soft: #f1f3f5;
+    --text-1: #0f172a;
+    --text-2: #475569;
+    --text-3: #94a3b8;
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-soft: #eef2ff;
+    --accent: #0ea5e9;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger: #dc2626;
+    --shadow-1: 0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.05);
+    --shadow-2: 0 4px 12px rgba(15,23,42,0.06), 0 2px 4px rgba(15,23,42,0.04);
+    --shadow-3: 0 12px 28px rgba(15,23,42,0.08), 0 4px 8px rgba(15,23,42,0.04);
+    --radius: 10px;
+    --radius-lg: 14px;
+    --radius-pill: 999px;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", sans-serif;
+    background: var(--bg); color: var(--text-1); font-size: 13px;
+    font-feature-settings: "ss03", "tnum"; -webkit-font-smoothing: antialiased;
+  }
+  button, select, input { font-family: inherit; }
+
+  /* ── Header ── */
+  header {
+    background: rgba(255,255,255,0.85); backdrop-filter: saturate(150%) blur(8px);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 28px; display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+  header .sub { font-size: 11px; color: var(--text-3); margin-top: 3px; font-weight: 500; }
+  .freshness {
+    display: flex; align-items: center; gap: 7px; font-size: 11px; padding: 5px 12px;
+    border-radius: var(--radius-pill); font-weight: 500;
+    transition: background-color 0.2s var(--ease);
+  }
+  .freshness.warn { background: #fef2f2; color: #b91c1c; box-shadow: inset 0 0 0 1px #fecaca; }
+  .freshness.ok { background: #f0fdf4; color: #15803d; box-shadow: inset 0 0 0 1px #bbf7d0; }
+  .freshness .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .freshness.warn .dot { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.15); animation: pulse 2s infinite; }
+  .freshness.ok .dot { background: #22c55e; }
+  @keyframes pulse { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:.6; transform:scale(0.85)} }
+
+  /* settings */
+  .settings-btn {
+    font-size: 11px; padding: 5px 12px; border: 1px solid var(--line);
+    background: var(--surface); border-radius: 8px; cursor: pointer; font-weight: 500;
+    transition: all 0.15s var(--ease);
+  }
+  .settings-btn:hover { background: var(--bg-soft); border-color: #d4d8de; transform: translateY(-1px); }
+  .settings-pop {
+    position: absolute; top: 38px; right: 0; width: 290px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-3); padding: 14px; display: none; z-index: 20;
+    animation: pop 0.2s var(--ease);
+  }
+  @keyframes pop { from{opacity:0; transform:translateY(-4px) scale(0.98)} to{opacity:1; transform:translateY(0) scale(1)} }
+  .settings-pop.open { display: block; }
+  .settings-title {
+    font-size: 11px; font-weight: 700; color: var(--text-1);
+    margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line-soft);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .settings-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; }
+  .settings-row span { color: var(--text-2); }
+  .settings-row select {
+    padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; font-size: 12px;
+    background: var(--surface); cursor: pointer; transition: border-color 0.15s;
+  }
+  .settings-row select:hover { border-color: #cbd5e1; }
+  .settings-foot { display: flex; align-items: center; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+  .settings-save {
+    padding: 6px 16px; background: var(--primary); color: #fff; border: none;
+    border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s var(--ease);
+  }
+  .settings-save:hover { background: var(--primary-hover); }
+
+  /* compliance inline editor */
+  .ratio-select {
+    padding: 2px 7px; border: 1px solid #86efac; background: #fff;
+    color: #14532d; border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: all 0.15s;
+  }
+  .ratio-select:hover { background: #f0fdf4; box-shadow: 0 0 0 3px rgba(34,197,94,0.12); }
+  .compliance-bar.fail { background: #fef2f2; box-shadow: inset 0 0 0 1px #fecaca; }
+  .compliance-bar.fail .icon { background: #b91c1c; }
+  .compliance-bar.fail b { color: #991b1b; }
+
+  /* ── 3-column layout ── */
+  .layout {
+    display: grid; grid-template-columns: 280px 380px 1fr; gap: 18px;
+    padding: 20px 28px; max-width: 1600px; margin: 0 auto; align-items: start;
+  }
+  .pane {
+    background: var(--surface); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-1);
+  }
+  .pane.sticky { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; }
+  .pane.sticky::-webkit-scrollbar { width: 6px; }
+  .pane.sticky::-webkit-scrollbar-thumb { background: #d4d8de; border-radius: 3px; }
+  .pane.sticky::-webkit-scrollbar-track { background: transparent; }
+
+  .pane-head {
+    padding: 14px 16px; border-bottom: 1px solid var(--line-soft);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .pane-head h2 { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; }
+  .pane-head .meta { font-size: 10px; color: var(--text-3); font-weight: 500; }
+
+  /* ── 입력 폼 ── */
+  .form-section { padding: 14px 16px; border-bottom: 1px solid var(--line-soft); }
+  .form-section:last-child { border-bottom: none; }
+  .form-label {
+    font-size: 11px; font-weight: 700; color: var(--text-1);
+    margin-bottom: 10px; display: flex; justify-content: space-between;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .step-num {
+    background: var(--primary-soft); color: var(--primary);
+    padding: 2px 8px; border-radius: var(--radius-pill); font-size: 10px; font-weight: 700;
+  }
+  .input-text, .budget-input {
+    width: 100%; padding: 8px 11px; border: 1px solid var(--line);
+    border-radius: 8px; font-size: 13px; transition: all 0.15s var(--ease);
+    background: var(--surface);
+  }
+  .input-text:focus, .budget-input:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+  }
+  .chips { display: flex; gap: 5px; flex-wrap: wrap; }
+  .chip {
+    padding: 5px 11px; border: 1px solid var(--line); border-radius: var(--radius-pill);
+    font-size: 11px; cursor: pointer; background: var(--surface); font-weight: 500;
+    transition: all 0.15s var(--ease);
+  }
+  .chip:hover { background: var(--bg-soft); border-color: #d4d8de; transform: translateY(-1px); }
+  .chip.active {
+    background: var(--text-1); color: #fff; border-color: var(--text-1);
+    box-shadow: 0 2px 6px rgba(15,23,42,0.18);
+  }
+  .checks { display: flex; flex-direction: column; gap: 6px; }
+  .check {
+    display: flex; align-items: center; gap: 9px; padding: 8px 11px;
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: 12px;
+    transition: all 0.15s var(--ease); font-weight: 500;
+  }
+  .check:hover { border-color: #d4d8de; }
+  .check input { accent-color: var(--primary); }
+  .check.checked {
+    background: var(--primary-soft); border-color: #c7d2fe;
+    box-shadow: inset 0 0 0 1px rgba(79,70,229,0.1);
+  }
+  .check .impact { margin-left: auto; font-size: 10px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .check.checked .impact { color: var(--primary); font-weight: 700; }
+  .budget-wrap { display: flex; gap: 6px; align-items: center; }
+  .budget-wrap input { flex: 1; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .budget-wrap .unit { font-size: 11px; color: var(--text-3); font-weight: 500; }
+  .est-hint { font-size: 10px; color: var(--text-3); margin-top: 7px; }
+  .submit-btn {
+    width: 100%; padding: 11px; background: var(--primary); color: #fff;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s var(--ease); letter-spacing: -0.01em;
+    box-shadow: 0 1px 2px rgba(79,70,229,0.3);
+  }
+  .submit-btn:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,0.3); }
+  .live-counter {
+    padding: 11px 16px;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border-bottom: 1px solid #c7d2fe;
+    font-size: 11px; color: var(--primary);
+    display: flex; justify-content: space-between; align-items: center; font-weight: 600;
+  }
+  .live-counter b { color: #312e81; font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 800; }
+
+  /* ── 결과 중앙 ── */
+  .precedent-banner {
+    background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px;
+    font-size: 11px; line-height: 1.65;
+    box-shadow: var(--shadow-1), inset 0 0 0 1px rgba(217,119,6,0.15);
+  }
+  .precedent-banner b { color: #92400e; font-weight: 700; }
+  .precedent-banner .label {
+    display: block; font-size: 10px; color: #92400e; margin-bottom: 4px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+
+  .compliance-bar {
+    padding: 11px 14px; background: #f0fdf4; border-radius: var(--radius);
+    font-size: 11px; display: flex; gap: 10px; align-items: center;
+    margin-bottom: 14px; cursor: help; font-weight: 500;
+    box-shadow: var(--shadow-1), inset 0 0 0 1px rgba(34,197,94,0.2);
+  }
+  .compliance-bar .icon {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--success);
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.18);
+  }
+  .compliance-bar b { color: #14532d; font-weight: 700; }
+  .compliance-bar .info { margin-left: auto; font-size: 11px; color: var(--success); opacity: 0.7; }
+
+  .kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .kpi {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 12px 14px; box-shadow: var(--shadow-1);
+    transition: box-shadow 0.2s var(--ease);
+  }
+  .kpi:hover { box-shadow: var(--shadow-2); }
+  .kpi .label { font-size: 10px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .kpi .value { font-size: 19px; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .kpi .delta { font-size: 10px; color: var(--text-3); margin-top: 2px; font-weight: 500; }
+
+  /* toolbar */
+  .toolbar {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 10px;
+    padding: 8px 12px; background: var(--surface); border-radius: var(--radius);
+    font-size: 11px; box-shadow: var(--shadow-1);
+  }
+  .toolbar .toggle {
+    padding: 4px 11px; border: 1px solid var(--line); background: var(--surface);
+    border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500;
+    transition: all 0.15s var(--ease);
+  }
+  .toolbar .toggle:hover { background: var(--bg-soft); border-color: #d4d8de; }
+  .toolbar .toggle.active { background: var(--text-1); color: #fff; border-color: var(--text-1); }
+  .toolbar .count { margin-left: auto; color: var(--text-3); font-weight: 500; }
+
+  /* 카드 */
+  .card-list { display: flex; flex-direction: column; gap: 8px; }
+  .rec-card {
+    background: var(--surface); border-radius: var(--radius); padding: 12px 14px;
+    cursor: pointer; display: grid; grid-template-columns: 32px 1fr auto; gap: 12px;
+    align-items: center; transition: all 0.18s var(--ease);
+    box-shadow: var(--shadow-1);
+  }
+  .rec-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
+  .rec-card.selected {
+    box-shadow: 0 0 0 2px var(--primary), var(--shadow-2);
+    background: linear-gradient(180deg, #fafbff 0%, #ffffff 60%);
+  }
+  .rec-card .rank {
+    font-size: 18px; font-weight: 800; color: var(--primary);
+    text-align: center; letter-spacing: -0.04em;
+  }
+  .rec-card:not(.selected) .rank { color: var(--text-3); }
+  .compare-mode .rec-card.checked-compare {
+    box-shadow: 0 0 0 2px #f59e0b, var(--shadow-2);
+    background: linear-gradient(180deg, #fffbeb 0%, #ffffff 60%);
+  }
+  .rc-name { font-weight: 700; font-size: 13px; letter-spacing: -0.01em; }
+  .rc-meta { font-size: 10.5px; color: var(--text-2); margin-top: 4px; font-weight: 500; }
+  .rc-badges { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+  .badge {
+    font-size: 9px; padding: 2px 7px; border-radius: 5px; font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .badge.tier-A { background: #dcfce7; color: #15803d; }
+  .badge.tier-B { background: #dbeafe; color: #1e40af; }
+  .badge.tier-C { background: #f1f5f9; color: var(--text-2); }
+  .badge.sr-female { background: #fce7f3; color: #be185d; }
+  .badge.sr-disabled { background: #fef3c7; color: #92400e; }
+  .badge.sr-social { background: #d1fae5; color: #065f46; }
+  .badge.region { background: #f1f5f9; color: var(--text-2); }
+  .badge.size { background: #ede9fe; color: #6d28d9; }
+  .badge.risk-warn { background: #fee2e2; color: #b91c1c; }
+  .rc-right { text-align: right; }
+  .rc-price { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .rc-price-unit { font-size: 9px; color: var(--text-3); font-weight: 500; margin-left: 1px; }
+  .rc-score { font-size: 10px; color: var(--text-3); margin-top: 3px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  /* ── 디테일 패널 ── */
+  .detail-pane { padding: 0; overflow: hidden; }
+  .detail-head {
+    padding: 18px 22px;
+    background: linear-gradient(180deg, #fafbff 0%, #ffffff 100%);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .dh-name { font-size: 19px; font-weight: 800; margin-bottom: 5px; letter-spacing: -0.02em; }
+  .dh-brn { font-size: 11px; color: var(--text-3); font-family: ui-monospace, "SF Mono", Consolas, monospace; }
+  .dh-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+
+  .detail-section { padding: 16px 22px; border-bottom: 1px solid var(--line-soft); }
+  .detail-section:last-of-type { border-bottom: none; }
+  .detail-section h3 {
+    font-size: 11px; font-weight: 700; color: var(--text-1);
+    margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* radar */
+  .radar-wrap { display: flex; align-items: center; gap: 18px; }
+  .radar-svg { width: 144px; height: 144px; flex-shrink: 0; }
+  .radar-legend { font-size: 11px; flex: 1; }
+  .radar-legend .row {
+    display: flex; justify-content: space-between; padding: 3px 0; gap: 16px;
+    font-weight: 500;
+  }
+  .radar-legend .row .k { color: var(--text-2); }
+  .radar-legend .row .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* 예상가 막대 */
+  .price-bar-wrap { padding: 6px 0 8px; }
+  .price-axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-3); padding: 0 4px; margin-bottom: 6px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .price-bar-bg { background: #f1f5f9; height: 16px; border-radius: 8px; position: relative; margin-bottom: 8px; }
+  .price-bar-iqr {
+    position: absolute; height: 16px;
+    background: linear-gradient(180deg, #93c5fd 0%, #60a5fa 100%);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(59,130,246,0.3);
+  }
+  .price-bar-median {
+    position: absolute; top: -3px; bottom: -3px; width: 3px;
+    background: #1e3a8a; border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.7);
+  }
+  .price-bar-marker {
+    position: absolute; top: -5px; bottom: -5px; width: 2px;
+    background: #ef4444;
+  }
+  .price-bar-marker::after {
+    content: '시장'; position: absolute; bottom: -18px; left: -10px;
+    font-size: 9px; color: #ef4444; font-weight: 600;
+  }
+  .price-bar-mybar::after {
+    content: '이 업체'; position: absolute; top: -16px; left: -16px;
+    font-size: 9px; color: #1e3a8a; font-weight: 700;
+  }
+  .price-stats { display: flex; gap: 18px; font-size: 11px; margin-top: 22px; flex-wrap: wrap; }
+  .price-stats b { color: var(--text-1); font-variant-numeric: tabular-nums; font-weight: 700; }
+  .price-stats .k { color: var(--text-3); font-weight: 500; }
+
+  /* risk */
+  .risk-pill {
+    display: inline-block; padding: 4px 11px; border-radius: var(--radius-pill);
+    font-size: 11px; font-weight: 700;
+  }
+  .risk-pill.safe { background: #dcfce7; color: #15803d; box-shadow: inset 0 0 0 1px rgba(34,197,94,0.25); }
+  .risk-pill.warn { background: #fef3c7; color: #92400e; box-shadow: inset 0 0 0 1px rgba(217,119,6,0.25); }
+  .risk-pill.danger { background: #fee2e2; color: #991b1b; box-shadow: inset 0 0 0 1px rgba(220,38,38,0.25); }
+  .stat-row {
+    display: flex; justify-content: space-between; padding: 4px 0; font-size: 11.5px;
+  }
+  .stat-row .k { color: var(--text-2); font-weight: 500; }
+  .stat-row .v { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-1); }
+
+  /* 최근 낙찰 */
+  .award-table { width: 100%; font-size: 11px; border-collapse: collapse; }
+  .award-table th {
+    text-align: left; color: var(--text-3); font-weight: 600;
+    padding: 6px 4px; border-bottom: 1px solid var(--line);
+    text-transform: uppercase; letter-spacing: 0.04em; font-size: 10px;
+  }
+  .award-table td { padding: 7px 4px; border-bottom: 1px solid var(--line-soft); font-weight: 500; }
+  .award-table tr:last-child td { border-bottom: none; }
+  .award-table .amt { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* 액션 바 */
+  .action-bar {
+    padding: 14px 22px; background: var(--bg-soft);
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .action-btn {
+    padding: 8px 14px; border: 1px solid var(--line); background: var(--surface);
+    border-radius: 8px; font-size: 11px; cursor: pointer; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: all 0.15s var(--ease);
+  }
+  .action-btn:hover { background: var(--bg-soft); border-color: #cbd5e1; transform: translateY(-1px); }
+  .action-btn.primary {
+    background: var(--primary); color: #fff; border-color: var(--primary);
+    box-shadow: 0 1px 2px rgba(79,70,229,0.3);
+  }
+  .action-btn.primary:hover { background: var(--primary-hover); box-shadow: 0 4px 12px rgba(79,70,229,0.3); }
+
+  /* 비교 표 */
+  .compare-table { padding: 16px 22px; }
+  .compare-grid {
+    display: grid; grid-template-columns: 110px repeat(3, 1fr); gap: 0;
+    border-radius: var(--radius); overflow: hidden;
+    box-shadow: var(--shadow-1);
+  }
+  .compare-grid > div {
+    padding: 10px 12px; border-right: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft); font-size: 11px; font-weight: 500;
+  }
+  .compare-grid > div:last-child { border-right: none; }
+  .compare-grid .head { background: var(--bg-soft); font-weight: 700; color: var(--text-1); }
+  .compare-grid .label { color: var(--text-3); background: #fafbfc; font-weight: 600; }
+  .compare-grid .winner { background: linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%); }
+  .compare-grid .winner b { color: #14532d; font-weight: 700; }
+
+  .empty-detail { padding: 80px 40px; text-align: center; color: var(--text-3); font-size: 13px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>ECO 추천 대시보드</h1>
+    <div class="sub">환경공단 관급자재 — 공고 전 후보 탐색</div>
+  </div>
+  <div style="display:flex;gap:14px;align-items:center;position:relative;">
+    <span class="freshness warn">
+      <span class="dot"></span>
+      데이터 갱신 지연 — 기준일 2026-04-25 (10일 전)
+    </span>
+    <button class="settings-btn" onclick="document.getElementById('settings-pop').classList.toggle('open')" aria-label="설정">
+      ⚙ 설정
+    </button>
+    <div id="settings-pop" class="settings-pop">
+      <div class="settings-title">기관 기본값 (브라우저 저장)</div>
+      <label class="settings-row">
+        <span>SR 의무비율 기본값</span>
+        <select>
+          <option>15%</option>
+          <option selected>20% (법정)</option>
+          <option>30%</option>
+          <option>40%</option>
+          <option>50%</option>
+          <option>직접입력…</option>
+        </select>
+      </label>
+      <label class="settings-row">
+        <span>추천 Top K</span>
+        <select>
+          <option>3</option>
+          <option selected>5</option>
+          <option>10</option>
+        </select>
+      </label>
+      <label class="settings-row">
+        <span>예산 단위</span>
+        <select><option selected>백만원</option><option>억원</option></select>
+      </label>
+      <div class="settings-foot">
+        <button class="settings-save">저장</button>
+        <span style="font-size:10px;color:#6b7280;margin-left:auto;">localStorage 에 저장됨</span>
+      </div>
+    </div>
+    <span style="font-size:10px;color:#9ca3af;">v0.2.1</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ───── 좌측: 입력 폼 (sticky) ───── -->
+  <aside class="pane sticky">
+    <div class="pane-head">
+      <h2>조회 조건</h2>
+      <span class="meta">조건 변경 시 자동 반영</span>
+    </div>
+
+    <!-- 라이브 후보 카운터 -->
+    <div class="live-counter">
+      <span>조건 충족 후보</span>
+      <b>86 업체</b>
+    </div>
+
+    <div class="form-section">
+      <div class="form-label">
+        <span>품목</span>
+        <span class="step-num">1</span>
+      </div>
+      <div class="chips">
+        <span class="chip active">하수처리용 펌프</span>
+        <span class="chip">슬러지 탈수기</span>
+        <span class="chip">소각로 내화벽돌</span>
+        <span class="chip">바이오가스 발전기</span>
+        <span class="chip">수질측정센서</span>
+        <span class="chip">대기오염 측정장비</span>
+        <span class="chip">폐수처리약품</span>
+        <span class="chip">활성탄 필터</span>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-label">
+        <span>정책 필터</span>
+        <span class="step-num">2</span>
+      </div>
+      <div class="checks">
+        <label class="check checked">
+          <input type="checkbox" checked> 사회적기업
+          <span class="impact">109→23</span>
+        </label>
+        <label class="check">
+          <input type="checkbox"> 여성기업
+          <span class="impact">+토글 시 109→41</span>
+        </label>
+        <label class="check checked">
+          <input type="checkbox" checked> 장애인기업
+          <span class="impact">109→7</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-label">
+        <span>예산</span>
+        <span class="step-num">3</span>
+      </div>
+      <div class="budget-wrap">
+        <input type="number" class="budget-input" value="800">
+        <span class="unit">백만원</span>
+      </div>
+      <div class="est-hint">평균 낙찰률 87% → 예상 696백만</div>
+    </div>
+
+    <div class="form-section" style="border-bottom:none;">
+      <button class="submit-btn">추천 재산출</button>
+    </div>
+  </aside>
+
+  <!-- ───── 중앙: 결과 list ───── -->
+  <main class="pane" style="background:transparent;border:none;padding:0;">
+
+    <!-- 전례 highlight -->
+    <div class="precedent-banner">
+      <span class="label">최근 12개월 유사 발주 (펌프 4015 · 예산 ±50%)</span>
+      <b>23건</b> 발주 — ○○펌프공업 <b>7건(30%)</b> · 대한산업기계 <b>4건(17%)</b> · 신한기계 <b>3건(13%)</b> · 기타 9건
+    </div>
+
+    <!-- 컴플라이언스 (인라인 편집 가능) -->
+    <div class="compliance-bar" title="조달사업법 시행령 제24조 — 사회적가치 우선구매 의무비율">
+      <span class="icon"></span>
+      <span>SR 의무비율 ≥</span>
+      <select class="ratio-select" onchange="this.parentElement.querySelector('.live-msg').textContent = '재계산 필요'">
+        <option>15%</option>
+        <option selected>20%</option>
+        <option>30%</option>
+        <option>40%</option>
+        <option>50%</option>
+      </select>
+      <span>—</span>
+      <b>상위 5개 후보 중 정책 인증 기업 3개 (60%)</b>
+      <span style="color:#15803d;">충족</span>
+      <span class="live-msg" style="margin-left:auto;font-size:10px;color:#9ca3af;">기관 설정 기준 적용</span>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="label">후보 업체</div>
+        <div class="value">86</div>
+        <div class="delta">등록 248 · 활동 86</div>
+      </div>
+      <div class="kpi">
+        <div class="label">정책 인증 보유 후보</div>
+        <div class="value">12 <span style="font-size:10px;font-weight:500;color:#6b7280;">14%</span></div>
+        <div class="delta">사회적 5 · 여성 4 · 장애인 6</div>
+      </div>
+      <div class="kpi">
+        <div class="label">평균 예상가</div>
+        <div class="value">696<span style="font-size:10px;font-weight:500;color:#6b7280;">백만</span></div>
+        <div class="delta">예산 대비 -13%</div>
+      </div>
+      <div class="kpi">
+        <div class="label">계약방식 검토안</div>
+        <div class="value" style="font-size:14px;">일반경쟁</div>
+        <div class="delta">후보 86 · 단독공급 아님</div>
+      </div>
+    </div>
+
+    <!-- toolbar -->
+    <div class="toolbar">
+      <button class="toggle">비교 보기</button>
+      <button class="toggle">전체 후보 보기 (86)</button>
+      <span class="count">상위 5건 / 전체 86</span>
+    </div>
+
+    <!-- 카드 5개 컴팩트 -->
+    <div class="card-list">
+
+      <div class="rec-card selected">
+        <div class="rank">#1</div>
+        <div>
+          <div class="rc-name">○○펌프공업(주) <span style="font-size:10px;font-weight:400;color:#6b7280;font-family:monospace;">123-45-67890</span></div>
+          <div class="rc-badges">
+            <span class="badge tier-A">A등급</span>
+            <span class="badge size">중소</span>
+            <span class="badge region">부산</span>
+            <span class="badge sr-female">여성</span>
+          </div>
+          <div class="rc-meta">환경공단 낙찰 14건 · 평균 87.3% · 탈락 0 · 최근 2025-01</div>
+        </div>
+        <div class="rc-right">
+          <div class="rc-price">698<span class="rc-price-unit">백만</span></div>
+          <div class="rc-score">종합점수 0.82</div>
+        </div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rank">#2</div>
+        <div>
+          <div class="rc-name">대한산업기계(주) <span style="font-size:10px;font-weight:400;color:#6b7280;font-family:monospace;">234-56-78901</span></div>
+          <div class="rc-badges">
+            <span class="badge tier-A">A등급</span>
+            <span class="badge size">중견</span>
+            <span class="badge region">경남</span>
+          </div>
+          <div class="rc-meta">환경공단 낙찰 9건 · 평균 89.1% · 탈락 0 · 최근 2024-11</div>
+        </div>
+        <div class="rc-right">
+          <div class="rc-price">713<span class="rc-price-unit">백만</span></div>
+          <div class="rc-score">종합점수 0.76</div>
+        </div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rank">#3</div>
+        <div>
+          <div class="rc-name">에코펌프시스템 <span style="font-size:10px;font-weight:400;color:#6b7280;font-family:monospace;">345-67-89012</span></div>
+          <div class="rc-badges">
+            <span class="badge tier-B">B등급</span>
+            <span class="badge size">소</span>
+            <span class="badge region">서울</span>
+            <span class="badge sr-social">사회적</span>
+          </div>
+          <div class="rc-meta">환경공단 낙찰 4건 · 평균 91.2% · 탈락 1 · 최근 2024-08</div>
+        </div>
+        <div class="rc-right">
+          <div class="rc-price">730<span class="rc-price-unit">백만</span></div>
+          <div class="rc-score">종합점수 0.64</div>
+        </div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rank">#4</div>
+        <div>
+          <div class="rc-name">신한기계(주) <span style="font-size:10px;font-weight:400;color:#6b7280;font-family:monospace;">456-78-90123</span></div>
+          <div class="rc-badges">
+            <span class="badge tier-B">B등급</span>
+            <span class="badge size">중소</span>
+            <span class="badge region">울산</span>
+          </div>
+          <div class="rc-meta">환경공단 낙찰 6건 · 평균 85.6% · 탈락 2 · 최근 2024-06</div>
+        </div>
+        <div class="rc-right">
+          <div class="rc-price">685<span class="rc-price-unit">백만</span></div>
+          <div class="rc-score">종합점수 0.58</div>
+        </div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rank">#5</div>
+        <div>
+          <div class="rc-name">동서엔지니어링 <span style="font-size:10px;font-weight:400;color:#6b7280;font-family:monospace;">567-89-01234</span></div>
+          <div class="rc-badges">
+            <span class="badge tier-C">검토대상</span>
+            <span class="badge size">중소</span>
+            <span class="badge region">부산</span>
+            <span class="badge sr-disabled">장애인</span>
+            <span class="badge risk-warn">탈락 3</span>
+          </div>
+          <div class="rc-meta">환경공단 낙찰 2건 · 평균 88.4% · 탈락 3 ⚠ · 최근 2024-02</div>
+        </div>
+        <div class="rc-right">
+          <div class="rc-price">707<span class="rc-price-unit">백만</span></div>
+          <div class="rc-score">종합점수 0.51</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ───── 우측: 디테일 사이드시트 ───── -->
+  <aside class="pane sticky detail-pane">
+
+    <div class="detail-head">
+      <div class="dh-name">○○펌프공업(주)</div>
+      <div class="dh-brn">123-45-67890 · 부산광역시 연제구</div>
+      <div class="dh-tags">
+        <span class="badge tier-A">A등급</span>
+        <span class="badge size">중소기업</span>
+        <span class="badge sr-female">여성기업</span>
+        <span style="font-size:11px;color:#6b7280;margin-left:auto;">2014년 등록 (11.1년)</span>
+      </div>
+    </div>
+
+    <!-- 평가 항목별 점수 -->
+    <div class="detail-section">
+      <h3>선정 근거 — 평가항목별 점수</h3>
+      <div class="radar-wrap">
+        <svg class="radar-svg" viewBox="0 0 140 140">
+          <!-- 축 격자 -->
+          <polygon points="70,15 125,55 105,120 35,120 15,55" fill="none" stroke="#e5e7eb" stroke-width="1"/>
+          <polygon points="70,32 110,62 95,108 45,108 30,62" fill="none" stroke="#f0f1f5" stroke-width="1"/>
+          <polygon points="70,49 95,69 85,96 55,96 45,69" fill="none" stroke="#f5f6f8" stroke-width="1"/>
+          <line x1="70" y1="70" x2="70" y2="15" stroke="#e5e7eb" stroke-width="1"/>
+          <line x1="70" y1="70" x2="125" y2="55" stroke="#e5e7eb" stroke-width="1"/>
+          <line x1="70" y1="70" x2="105" y2="120" stroke="#e5e7eb" stroke-width="1"/>
+          <line x1="70" y1="70" x2="35" y2="120" stroke="#e5e7eb" stroke-width="1"/>
+          <line x1="70" y1="70" x2="15" y2="55" stroke="#e5e7eb" stroke-width="1"/>
+          <!-- 데이터 (대략) -->
+          <polygon points="70,18 122,57 100,115 40,118 18,57" fill="rgba(37,99,235,0.18)" stroke="#2563eb" stroke-width="1.5"/>
+          <!-- 축 라벨 -->
+          <text x="70" y="10" text-anchor="middle" font-size="9" fill="#374151">SR</text>
+          <text x="135" y="55" text-anchor="middle" font-size="9" fill="#374151">실적</text>
+          <text x="115" y="135" text-anchor="middle" font-size="9" fill="#374151">가격</text>
+          <text x="25" y="135" text-anchor="middle" font-size="9" fill="#374151">공급</text>
+          <text x="5" y="55" text-anchor="middle" font-size="9" fill="#374151">가점</text>
+        </svg>
+        <div class="radar-legend" style="flex:1;">
+          <div class="row"><span class="k">SR (35%)</span><span class="v">●●● 1.00</span></div>
+          <div class="row"><span class="k">실적 (30%)</span><span class="v">●●● 0.95</span></div>
+          <div class="row"><span class="k">가격 (20%)</span><span class="v">● 0.20</span></div>
+          <div class="row"><span class="k">공급 (15%)</span><span class="v">●●● 1.00</span></div>
+          <div class="row" style="border-top:1px solid #f0f1f5;margin-top:4px;padding-top:5px;"><span class="k">합계 점수</span><span class="v" style="color:#2563eb;font-size:13px;font-weight:700;">0.82</span></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#4b5563;line-height:1.6;margin-top:10px;padding:8px 10px;background:#f9fafb;border-radius:6px;">
+        부산권역 펌프 납품 실적 14건, 여성기업 인증 보유, 평균 낙찰률 양호. 예상가는 비교군 대비 높은 편으로 가격 점수 낮음.
+      </div>
+    </div>
+
+    <!-- 예상가 막대 시각화 -->
+    <div class="detail-section">
+      <h3>예상 가격</h3>
+      <div class="price-bar-wrap">
+        <div class="price-axis">
+          <span>500</span><span>600</span><span>700</span><span>800</span>
+        </div>
+        <div class="price-bar-bg">
+          <!-- 시장 평균 마커 (696백만) -->
+          <div class="price-bar-marker" style="left:65%"></div>
+          <!-- 이 BRN의 IQR (680~712) -->
+          <div class="price-bar-iqr price-bar-mybar" style="left:60%;width:16%;"></div>
+          <!-- 중앙값 (698) -->
+          <div class="price-bar-median" style="left:66%"></div>
+        </div>
+      </div>
+      <div class="price-stats">
+        <span><span class="k">예상가</span> <b>698백만</b></span>
+        <span><span class="k">구간(50%)</span> <b>680~712</b></span>
+        <span><span class="k">낙찰률 변동폭</span> <b>낮음 (2.1%p)</b></span>
+        <span><span class="k">유사 발주 평균 대비</span> <b style="color:#15803d;">+0.3%p</b></span>
+      </div>
+      <div style="font-size:10px;color:#6b7280;margin-top:8px;">
+        과거 14건 낙찰률 [85.2~90.4%] 기준 · 유사 발주 평균 86.2% · 표본 14건
+      </div>
+    </div>
+
+    <!-- 위험요인 + 공급안정성 -->
+    <div class="detail-section">
+      <h3>위험요인 및 공급 안정성</h3>
+      <div class="detail-grid">
+        <div>
+          <div style="margin-bottom:8px;"><span class="risk-pill safe">위험등급: 낮음</span></div>
+          <div class="stat-row"><span class="k">1순위 누적</span><span class="v">14회</span></div>
+          <div class="stat-row"><span class="k">최종낙찰 실패</span><span class="v">0회</span></div>
+          <div class="stat-row"><span class="k">최근 1년 탈락</span><span class="v">0회</span></div>
+          <div class="stat-row"><span class="k">최근 활동 확인</span><span class="v" style="color:#15803d;">4개월 전</span></div>
+        </div>
+        <div>
+          <div class="stat-row"><span class="k">G2B 등록</span><span class="v">11.1년</span></div>
+          <div class="stat-row"><span class="k">총 낙찰액</span><span class="v">52.1억</span></div>
+          <div class="stat-row"><span class="k">평균 거래 간격</span><span class="v">73일</span></div>
+          <div class="stat-row"><span class="k">자체 제조 여부</span><span class="v">예</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 최근 낙찰 -->
+    <div class="detail-section">
+      <h3>최근 낙찰 이력 5건</h3>
+      <table class="award-table">
+        <thead><tr><th>일자</th><th>공고명</th><th class="amt">낙찰액 / 낙찰률</th></tr></thead>
+        <tbody>
+          <tr><td>2025-01-22</td><td>하수처리장 인라인펌프</td><td class="amt">412백만 / 88.5%</td></tr>
+          <tr><td>2024-11-08</td><td>가압부스터펌프 교체</td><td class="amt">156백만 / 89.1%</td></tr>
+          <tr><td>2024-08-19</td><td>원심펌프 일괄구매</td><td class="amt">810백만 / 86.2%</td></tr>
+          <tr><td>2024-05-30</td><td>슬러지펌프 정밀점검</td><td class="amt">94백만 / 90.0%</td></tr>
+          <tr><td>2024-03-12</td><td>잉여활성슬러지펌프</td><td class="amt">623백만 / 87.4%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 액션 바 -->
+    <div class="action-bar">
+      <button class="action-btn primary">📝 검토 메모</button>
+      <button class="action-btn">📄 PDF 출력</button>
+      <button class="action-btn">⊞ 비교에 추가</button>
+      <button class="action-btn" style="margin-left:auto;">↗ 전체 이력</button>
+    </div>
+
+  </aside>
+
+</div>
+
+<!-- ── (참고) 비교 모드 미리보기 — 현재 hidden 상태 ── -->
+<div style="max-width:1600px;margin:24px auto 32px;padding:0 24px;">
+  <div style="background:#fffbeb;border:1px dashed #fbbf24;border-radius:8px;padding:14px 18px;font-size:11px;color:#92400e;">
+    <b>비교 보기 선택 시 상세 패널에 비교표 표시</b> — 후보를 선택하면 우측 상세 영역에서 항목별 비교 가능
+  </div>
+  <div class="compare-table" style="background:#fff;border:1px solid #e3e6eb;border-radius:8px;margin-top:8px;">
+    <div class="compare-grid">
+      <div class="head">항목</div>
+      <div class="head">○○펌프공업 #1</div>
+      <div class="head">대한산업기계 #2</div>
+      <div class="head">에코펌프시스템 #3</div>
+
+      <div class="label">점수</div>
+      <div class="winner"><b>0.82</b></div>
+      <div>0.76</div>
+      <div>0.64</div>
+
+      <div class="label">예상가</div>
+      <div class="winner"><b>698백만</b></div>
+      <div>713백만</div>
+      <div>730백만</div>
+
+      <div class="label">낙찰 건수</div>
+      <div class="winner"><b>14건</b></div>
+      <div>9건</div>
+      <div>4건</div>
+
+      <div class="label">평균 낙찰률</div>
+      <div>87.3%</div>
+      <div>89.1%</div>
+      <div class="winner"><b>91.2%</b></div>
+
+      <div class="label">탈락 이력</div>
+      <div class="winner"><b>0회</b></div>
+      <div class="winner"><b>0회</b></div>
+      <div>1회</div>
+
+      <div class="label">SR 인증</div>
+      <div class="winner"><b>여성</b></div>
+      <div>—</div>
+      <div class="winner"><b>사회적</b></div>
+
+      <div class="label">권역</div>
+      <div class="winner"><b>발주 권역 일치 (부산)</b></div>
+      <div>인접 권역 (경남)</div>
+      <div>서울</div>
+
+      <div class="label">위험등급</div>
+      <div class="winner"><b>낮음</b></div>
+      <div class="winner"><b>낮음</b></div>
+      <div>보통</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
