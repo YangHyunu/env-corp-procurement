@@ -10,15 +10,12 @@ export function PriceBar({ price, kpi }: Props) {
   const marketAvg = kpi?.avg_expected_price_million ?? null
 
   const hasIQR = n_samples >= 3 && q25_million != null && q75_million != null
+  const isSparse = !hasIQR
 
   // Determine axis range
-  const values = [
-    point_million,
-    q25_million,
-    q75_million,
-    marketAvg,
-  ].filter((v): v is number => v != null)
-
+  const values = [point_million, q25_million, q75_million, marketAvg].filter(
+    (v): v is number => v != null,
+  )
   const minVal = Math.min(...values) * 0.92
   const maxVal = Math.max(...values) * 1.08
   const range = maxVal - minVal || 1
@@ -31,18 +28,41 @@ export function PriceBar({ price, kpi }: Props) {
 
   return (
     <div>
-      <h3
+      <div
         style={{
-          fontSize: 11,
-          fontWeight: 700,
-          color: '#0f172a',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
           marginBottom: 12,
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
         }}
       >
-        예상 가격
-      </h3>
+        <h3
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            color: '#0f172a',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            margin: 0,
+          }}
+        >
+          예상 가격
+        </h3>
+        {/* (나) 표본 안내 배지 */}
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            padding: '3px 9px',
+            borderRadius: 999,
+            background: isSparse ? '#fef3c7' : '#f1f5f9',
+            color: isSparse ? '#92400e' : '#475569',
+            boxShadow: isSparse ? 'inset 0 0 0 1px rgba(217,119,6,0.25)' : 'none',
+          }}
+        >
+          {isSparse ? `표본 ${n_samples}건 — 점추정만` : `표본 ${n_samples}건`}
+        </span>
+      </div>
 
       <div style={{ padding: '6px 0 8px' }}>
         {/* 축 */}
@@ -66,14 +86,15 @@ export function PriceBar({ price, kpi }: Props) {
         {/* 막대 */}
         <div
           style={{
-            background: '#f1f5f9',
+            background: isSparse ? '#f8fafc' : '#f1f5f9',
             height: 16,
             borderRadius: 8,
             position: 'relative',
             marginBottom: 8,
+            opacity: isSparse ? 0.6 : 1,
           }}
         >
-          {/* IQR 구간 */}
+          {/* IQR 구간 — n>=3 일 때만 */}
           {hasIQR && (
             <div
               style={{
@@ -98,6 +119,7 @@ export function PriceBar({ price, kpi }: Props) {
                 width: 2,
                 left: pct(marketAvg),
                 background: '#ef4444',
+                opacity: 1,
               }}
             >
               <span
@@ -111,38 +133,71 @@ export function PriceBar({ price, kpi }: Props) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                유사 발주 평균
+                추천 후보 평균
               </span>
             </div>
           )}
 
-          {/* 이 업체 중앙값 */}
-          <div
-            style={{
-              position: 'absolute',
-              top: -3,
-              bottom: -3,
-              width: 3,
-              left: pct(point_million),
-              background: '#1e3a8a',
-              borderRadius: 2,
-              boxShadow: '0 0 0 1px rgba(255,255,255,0.7)',
-            }}
-          >
-            <span
+          {/* 이 업체 — n>=3: 굵은 라인(중앙값) / n<3: 큼지막한 dot */}
+          {hasIQR ? (
+            <div
               style={{
                 position: 'absolute',
-                top: -16,
-                left: -16,
-                fontSize: 9,
-                color: '#1e3a8a',
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
+                top: -3,
+                bottom: -3,
+                width: 3,
+                left: pct(point_million),
+                background: '#1e3a8a',
+                borderRadius: 2,
+                boxShadow: '0 0 0 1px rgba(255,255,255,0.7)',
               }}
             >
-              이 업체
-            </span>
-          </div>
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -16,
+                  left: -16,
+                  fontSize: 9,
+                  color: '#1e3a8a',
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                이 업체
+              </span>
+            </div>
+          ) : (
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: pct(point_million),
+                transform: 'translate(-50%, -50%)',
+                width: 18,
+                height: 18,
+                borderRadius: '50%',
+                background: '#1e3a8a',
+                boxShadow: '0 0 0 3px rgba(30,58,138,0.18), 0 2px 4px rgba(0,0,0,0.15)',
+                opacity: 1,
+                zIndex: 2,
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: -18,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  fontSize: 9,
+                  color: '#1e3a8a',
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                이 업체
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -178,10 +233,10 @@ export function PriceBar({ price, kpi }: Props) {
         )}
       </div>
 
-      <div style={{ fontSize: 10, color: '#6b7280', marginTop: 8 }}>
-        {n_samples >= 3
-          ? `과거 ${n_samples}건 낙찰 기준 · 표본 ${n_samples}건`
-          : `표본 ${n_samples}건 (IQR 표시 불가)`}
+      <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8, fontWeight: 500 }}>
+        {hasIQR
+          ? `과거 ${n_samples}건 낙찰 기준 · 구간/변동폭 산출 가능`
+          : `표본 부족 (n<3) — 구간·변동폭 산출 불가, 점추정만 표시`}
       </div>
     </div>
   )
@@ -199,7 +254,13 @@ function StatItem({
   return (
     <span>
       <span style={{ color: '#94a3b8', fontWeight: 500 }}>{label}</span>{' '}
-      <b style={{ color: valueColor ?? '#0f172a', fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
+      <b
+        style={{
+          color: valueColor ?? '#0f172a',
+          fontVariantNumeric: 'tabular-nums',
+          fontWeight: 700,
+        }}
+      >
         {value}
       </b>
     </span>
