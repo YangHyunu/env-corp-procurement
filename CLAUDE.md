@@ -550,3 +550,23 @@ BRN D 신한 (낙찰 6, SR 0, 낙찰률 86%)
 - 학습 데이터 양 빈약 (positive 449건) — DeepFM 같은 deep model 어려움
 - prefix_warm pool 좁음 — cold-start BRN 처리 X
 - synthetic bid 노이즈 — 실제 발주 아니라 공고 측 피처 가정값 사용
+
+### AI 클러스터링 — 보류 (Phase 3 장기 후보)
+
+§1 원래 분석 차원 5번. 현재 미구현 (스텁).
+
+**자리만 있음:**
+- `KpiResponse.cluster_count: int | None`  — MVP 스텁 None
+- `scoring.axes.cluster_fit = 0.5`  — radar 5축 중 모든 BRN 동일값
+
+**원래 계획 (보류):**
+- UMAP (다차원 → 2D 임베딩) + HDBSCAN/DBSCAN (밀도 클러스터링)
+- 용도: 유사 BRN 군집화 / cold-start 처리 / 시각화
+
+**보류 사유:**
+- 추천 의사결정에 필수 X — 보조 분석 영역
+- 운영 컨셉이 "Top K 추천" 으로 좁아져 우선순위 하향
+- 데이터 양 (449 winners) 으로 임베딩 학습 빈약 우려
+
+**Phase 3 도입 시 Two-Tower / LightGCN BRN 임베딩과 같은 시점에 진행.**
+임베딩 → HDBSCAN → 군집 ID → 랭커 cluster_fit axis 채움.
