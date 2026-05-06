@@ -1,11 +1,13 @@
 import type {
-  ItemSummary,
-  RecommendRequest,
-  RecommendResponse,
+  MetaResponse,
+  RecommendV2Request,
+  RecommendV2Response,
 } from './types'
 
+const BASE = 'http://localhost:8000'
+
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetch(`${BASE}${url}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -25,14 +27,18 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>
 }
 
-export function listItems(q: string, limit = 20): Promise<ItemSummary[]> {
-  const params = new URLSearchParams({ limit: String(limit) })
-  if (q) params.set('q', q)
-  return jsonFetch<ItemSummary[]>(`/api/items?${params.toString()}`)
+// ── V2 엔드포인트 ────────────────────────────────────────────────────
+
+export function fetchKeywords(): Promise<string[]> {
+  return jsonFetch<string[]>('/api/v2/keywords')
 }
 
-export function recommend(req: RecommendRequest): Promise<RecommendResponse> {
-  return jsonFetch<RecommendResponse>('/api/recommend', {
+export function fetchMeta(): Promise<MetaResponse> {
+  return jsonFetch<MetaResponse>('/api/v2/meta')
+}
+
+export function fetchRecommendV2(req: RecommendV2Request): Promise<RecommendV2Response> {
+  return jsonFetch<RecommendV2Response>('/api/v2/recommend', {
     method: 'POST',
     body: JSON.stringify(req),
   })

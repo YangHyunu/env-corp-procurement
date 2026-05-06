@@ -1,4 +1,135 @@
-// API types — schemas.py 1:1 매핑
+// ── V2 타입 (api/schemas.py 1:1 미러) ──────────────────────────────
+
+export interface SrFilterV2 {
+  female_ceo: boolean
+  disabled_corp: boolean
+  social_corp: boolean
+}
+
+export interface RecommendV2Request {
+  item_keyword: string
+  budget_million_won: number
+  sr_filter: SrFilterV2
+  top_k: number
+}
+
+export interface ExpectedPrice {
+  point: number
+  point_million: number
+  q25: number | null
+  q75: number | null
+  q25_million: number | null
+  q75_million: number | null
+  sigma_pp: number | null
+  market_diff_pp: number | null
+  n_samples: number
+}
+
+export interface RiskInfo {
+  grade: '안전' | '양호' | '주의' | '미확인'
+  top1_count: number
+  lost_count: number
+  lost_ratio: number
+  recent_lost: number
+  dormant_months: number | null
+  is_dormant: boolean
+}
+
+export interface SupplyStability {
+  g2b_age_years: number | null
+  award_total_amt: number
+  is_manufacturer: boolean
+  last_award_at: string | null
+}
+
+export interface AwardItemV2 {
+  bid_ntce_no: string
+  bid_ntce_nm: string | null
+  fnl_sucsf_date: string | null
+  sucsfbid_amt: number | null
+  sucsfbid_rate: number | null
+}
+
+export interface PrecedentItem {
+  bid_ntce_no: string
+  bid_ntce_nm: string | null
+  fnl_sucsf_date: string | null
+  sucsfbid_amt: number | null
+  bidwinnr_brn: string | null
+  winner_corp_name: string | null
+}
+
+export interface ChartsData {
+  bid_rate_distribution: number[]
+  bid_amt_distribution: number[]
+}
+
+export interface SummaryStatsV2 {
+  award_count: number
+  avg_bid_rate: number | null
+  last_award_at: string | null
+  lost_count: number
+}
+
+export interface MarketDepth {
+  registered: number
+  env_active: number
+}
+
+export interface KpiV2 {
+  pool_size: number
+  market_depth: MarketDepth
+  sr_count: number
+  sr_pct: number
+  avg_expected_price_million: number | null
+  supply_risk: string
+  contract_recommend: string
+}
+
+export interface ComplianceInfo {
+  sr_in_top_k: number
+  sr_pct_top_k: number
+  obligation_threshold_pct: number
+  obligation_met: boolean
+}
+
+export interface RecommendationV2Item {
+  rank: number
+  brn: string
+  corp_name: string | null
+  tier: string
+  badges: string[]
+  summary_stats: SummaryStatsV2
+  expected_price: ExpectedPrice
+  risk: RiskInfo
+  supply_stability: SupplyStability
+  recent_awards: AwardItemV2[]
+  precedents: PrecedentItem[]
+  charts: ChartsData
+  rule_score: number
+  ml_score: number | null
+  score_used: string
+  reason: string
+}
+
+export interface RecommendV2Response {
+  item_keyword: string
+  matched_prefix4: string[]
+  cutoff_date: string
+  kpi: KpiV2 | null
+  compliance: ComplianceInfo | null
+  recommendations: RecommendationV2Item[]
+  meta: Record<string, unknown>
+}
+
+export interface MetaResponse {
+  data_cutoff: string
+  freshness_days: number
+  stale_warning: boolean
+  sources: Record<string, string>
+}
+
+// ── V1 타입 (하위호환 유지) ─────────────────────────────────────────
 export interface ItemSummary {
   item_code: string
   item_name: string
@@ -39,7 +170,6 @@ export interface RecommendationItem {
   brn: string
   corp_name: string
   composite_score: number
-  // pipeline.scoring.score 결과: 5축 (price_competitiveness 제외)
   axes: {
     supply_stability: number
     sr_diversity: number
