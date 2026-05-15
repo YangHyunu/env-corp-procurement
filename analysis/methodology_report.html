@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>평가 점수 산출 로직 및 클러스터링 방법론</title>
+<style>
+  :root{
+    --ink:#0f172a;
+    --body:#1e293b;
+    --muted:#475569;
+    --line:#cbd5e1;
+    --line-soft:#e2e8f0;
+    --accent:#1e3a5f;
+    --bg-soft:#f8fafc;
+    --bg-row:#f1f5f9;
+    --bg-evid:#f5f7fb;
+    --bg-formula:#0f172a;
+    --bg-formula-fg:#e2e8f0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#eef2f7;color:var(--body)}
+  body{
+    font-family: "Pretendard","Apple SD Gothic Neo","Noto Sans KR",ui-sans-serif,system-ui,-apple-system,sans-serif;
+    font-size:15.5px; line-height:1.75;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{
+    max-width:880px; margin:32px auto; background:#fff;
+    padding:64px 72px 72px;
+    box-shadow:0 1px 2px rgba(15,23,42,.05),0 8px 24px rgba(15,23,42,.06);
+    border-radius:4px;
+  }
+  header.cover{
+    border-bottom:1px solid var(--line);
+    padding-bottom:24px; margin-bottom:32px;
+  }
+  header.cover .tag{
+    font-size:12px; letter-spacing:.12em; color:var(--accent);
+    text-transform:uppercase; font-weight:600;
+  }
+  header.cover h1{
+    font-size:26px; margin:8px 0 6px; color:var(--ink); letter-spacing:-.01em;
+  }
+  header.cover .sub{ color:var(--muted); font-size:14px; }
+  header.cover .meta{
+    margin-top:14px; font-size:13px; color:var(--muted);
+    display:flex; gap:18px; flex-wrap:wrap;
+  }
+  header.cover .meta span b{ color:var(--body); font-weight:600; }
+
+  h2.chapter{
+    font-size:21px; color:var(--ink); margin:48px 0 18px;
+    padding-bottom:8px; border-bottom:2px solid var(--ink);
+    letter-spacing:-.01em;
+  }
+  h2.chapter .num{ color:var(--accent); margin-right:10px; font-variant-numeric:tabular-nums; }
+  h3.section{
+    font-size:16.5px; color:var(--ink); margin:28px 0 10px;
+    letter-spacing:-.005em;
+  }
+  h3.section .num{ color:var(--accent); margin-right:8px; font-variant-numeric:tabular-nums; }
+
+  p{ margin:8px 0 12px; }
+  p.lead{ color:var(--body); }
+  ul,ol{ margin:8px 0 14px; padding-left:22px; }
+  li{ margin:4px 0; }
+  strong{ color:var(--ink); }
+  code{
+    font-family: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    font-size:.92em; background:var(--bg-row); padding:1px 6px; border-radius:3px;
+    color:var(--ink);
+  }
+
+  table{
+    width:100%; border-collapse:collapse; margin:14px 0 18px;
+    font-size:14.5px;
+  }
+  th,td{ padding:9px 12px; border-bottom:1px solid var(--line-soft); text-align:left; vertical-align:top; }
+  thead th{
+    background:var(--bg-row); color:var(--ink); font-weight:600;
+    border-bottom:1px solid var(--line);
+  }
+  td.num,th.num{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  td.center,th.center{ text-align:center; }
+  .accent{ color:var(--accent); font-weight:600; }
+
+  .formula{
+    background:var(--bg-formula); color:var(--bg-formula-fg);
+    font-family: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    font-size:14px; line-height:1.6;
+    padding:14px 18px; border-radius:4px; margin:14px 0 18px;
+    white-space:pre; overflow-x:auto;
+  }
+
+  .evidence{
+    background:var(--bg-evid);
+    border-left:3px solid var(--accent);
+    padding:12px 18px; margin:14px 0 18px;
+    border-radius:0 3px 3px 0;
+  }
+  .evidence .label{
+    font-size:11px; letter-spacing:.14em; color:var(--accent);
+    text-transform:uppercase; font-weight:700; margin-bottom:4px;
+  }
+
+  .callout{
+    background:var(--bg-soft); border:1px solid var(--line-soft);
+    padding:14px 18px; margin:14px 0 18px; border-radius:4px;
+    font-size:14.5px;
+  }
+
+  .grp{
+    display:inline-block; padding:1px 8px; border-radius:3px;
+    font-size:11.5px; font-weight:700; letter-spacing:.04em;
+    white-space:nowrap;
+  }
+  .grp.veteran{ background:#dbeafe; color:#1e3a8a; }
+  .grp.real   { background:#dcfce7; color:#166534; }
+  .grp.auto   { background:#fef3c7; color:#854d0e; }
+  .grp.dormant{ background:#e2e8f0; color:#475569; }
+  .grp.noise  { background:#fee2e2; color:#991b1b; }
+
+  table.profile td, table.profile th{ padding:7px 10px; font-size:13.5px; }
+  table.profile td.label{ max-width:340px; }
+
+  hr.chapter-break{
+    border:0; border-top:1px solid var(--line); margin:48px 0; height:0;
+  }
+
+  footer.colophon{
+    margin-top:48px; padding-top:18px; border-top:1px solid var(--line-soft);
+    font-size:12px; color:var(--muted); line-height:1.6;
+  }
+
+  @media print{
+    html,body{ background:#fff; }
+    .page{ box-shadow:none; margin:0; max-width:none; padding:24mm 22mm; border-radius:0;}
+    h2.chapter{ page-break-before:always; }
+    h2.chapter:first-of-type{ page-break-before:auto; }
+    table,.formula,.evidence,.callout{ page-break-inside:avoid; }
+    @page{ size:A4; margin:0; }
+  }
+</style>
+</head>
+<body>
+
+<main class="page">
+
+<header class="cover">
+  <div class="tag">METHODOLOGY · REPORT EXCERPT</div>
+  <h1>평가 점수 산출 로직 및 클러스터링 방법론</h1>
+  <div class="sub">한국환경공단 환경기초시설 관급자재 SR 공급망 분석 및 발주 의사결정 지원 시스템</div>
+  <div class="meta">
+    <span><b>분석 모집단</b> 1,694 BRN</span>
+    <span><b>데이터 기준일</b> 2026-04-29</span>
+    <span><b>대상 권역</b> 환경공단 dminsttCd 10</span>
+    <span><b>점수 모드</b> Rule-based (Phase 1)</span>
+  </div>
+</header>
+
+<!-- ===================== X.1 평가 점수 산출 로직 ===================== -->
+
+<h2 class="chapter"><span class="num">X.1</span>평가 점수 산출 로직</h2>
+
+<h3 class="section"><span class="num">X.1.1</span>모델 선정 근거</h3>
+<p class="lead">
+실무자는 5분 안에 결정해야 한다. 정확도보다 <strong>해석 가능성</strong>이 먼저다.
+ML 회귀·랭킹은 학습 데이터 449건으로 일반화가 어렵고 결과 설명도 안 된다.
+그래서 가중합으로 갔다. 항목별 기여도가 그대로 보이고, 가중치 조정도 바로 반영되고, 감사 추적도 된다.
+</p>
+
+<h3 class="section"><span class="num">X.1.2</span>4축 평가 체계</h3>
+<table>
+  <thead>
+    <tr><th>축</th><th class="num">가중치</th><th>정의</th><th>정규화</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>sr_diversity</strong></td><td class="num accent">0.35</td><td>SR 인증 개수 / 4 (사회적기업·여성·장애인·기타)</td><td>0 ~ 1</td></tr>
+    <tr><td><strong>track_record</strong></td><td class="num">0.30</td><td>min(환경공단 누적 낙찰 건수, 10) / 10</td><td>0 ~ 1</td></tr>
+    <tr><td><strong>price</strong></td><td class="num">0.20</td><td>1 − (BRN 평균 낙찰률 / 100)</td><td>0 ~ 1</td></tr>
+    <tr><td><strong>supply</strong></td><td class="num">0.15</td><td>min(G2B 등록기간(년), 10) / 10</td><td>0 ~ 1</td></tr>
+  </tbody>
+</table>
+
+<div class="formula">composite_score = 0.35·sr_diversity + 0.30·track_record + 0.20·price + 0.15·supply</div>
+
+<div class="evidence">
+  <div class="label">가중치 결정 근거</div>
+  <ul>
+    <li><strong>sr_diversity 0.35 (최대)</strong> — 환경공단은 발주의 일정 비율을 SR 인증 업체에 배정할 의무가 있다. 점수 모델에서 이 의무가 가장 큰 비중을 가져야 한다.</li>
+    <li><strong>track_record 0.30</strong> — 환경공단 누적 실적이 많을수록 도메인 적합성과 사후관리 이력이 검증된 업체다.</li>
+    <li><strong>price 0.20</strong> — 가격은 <em>후보 추천</em> 단계에서는 보조 신호다. 비중을 너무 높이면 SR 정책 목적이 흐려진다.</li>
+    <li><strong>supply 0.15 (최소)</strong> — 신생 기업도 추천 풀에 들어올 수 있어야 한다. 등록기간 가중치는 낮게 둔다.</li>
+  </ul>
+  <p style="margin:6px 0 0;font-size:13.5px;color:var(--muted)">
+    가중치 합 1.0은 <code>_validate_weights</code> 에서 강제한다. 코드 수정 후 합이 틀리면 즉시 에러가 난다.
+  </p>
+</div>
+
+<h3 class="section"><span class="num">X.1.3</span>SR Soft Floor</h3>
+<p>
+후보 풀에 SR 보유사가 3개 이상이면, <code>sr_count = 0</code> 인 BRN 의 점수에서 1.0 을 뺀다.
+「SR 풀이 충분할 때는 SR 0 후보를 상위에 안 올린다」는 원칙을 코드로 옮긴 것이다.
+풀이 부족하면(<code>n_sr &lt; 3</code>) floor 를 발동하지 않는다.
+</p>
+<div class="formula">if n_sr_certified ≥ 3 and sr_count == 0:
+    composite_score ← composite_score − 1.0
+    is_sr_demoted ← True</div>
+
+<h3 class="section"><span class="num">X.1.4</span>클러스터 기반 가중치 보정 (±0.10)</h3>
+<p>
+추천된 각 BRN의 클러스터 라벨을 보고 4축 가중치를 ±0.10 범위에서 조정한다.
+합이 1.0이 되도록 보상 축에서 같은 양을 뺀다.
+</p>
+<table>
+  <thead>
+    <tr>
+      <th>클러스터 유형</th>
+      <th class="num">supply</th>
+      <th class="num">sr</th>
+      <th class="num">track_record</th>
+      <th class="num">price</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>환경공단 주력 공급사 <span style="color:var(--muted);font-size:13px">(veteran)</span></td>
+        <td class="num accent">+0.10</td><td class="num">0</td><td class="num">−0.10</td><td class="num">0</td></tr>
+    <tr><td>진짜 SR 인증 활성 <span style="color:var(--muted);font-size:13px">(real_sr)</span></td>
+        <td class="num">0</td><td class="num accent">+0.10</td><td class="num">0</td><td class="num">−0.10</td></tr>
+    <tr><td>활동중단 <span style="color:var(--muted);font-size:13px">(dormant)</span></td>
+        <td class="num">−0.10</td><td class="num">−0.05</td><td class="num">0</td><td class="num accent">+0.15</td></tr>
+    <tr><td>그 외 / 노이즈</td>
+        <td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+  </tbody>
+</table>
+
+<div class="evidence">
+  <div class="label">근거</div>
+  <p style="margin:0">
+  기본 가중치는 후보 전체 평균 기준이다. 누적 9억 이상 납품한 단골 BRN은 공급 안정성이 핵심 판단 기준이 되어야 하고, SR 활성 풀은 정책 효과를 더 강하게 반영해야 한다.
+  클러스터로 나눈 4개 그룹의 특성을 가중치에 반영해서, 풀 평균을 따르되 BRN 맥락에 맞게 조정한다.
+  </p>
+</div>
+
+<h3 class="section"><span class="num">X.1.5</span>Tier 부여</h3>
+<p>
+composite_score 상위 33%는 <strong>A</strong>, 다음 33%는 <strong>B</strong>, 나머지는 <strong>C</strong>.
+raw score (0~1) 수치는 화면에 안 내보낸다. calibration 전 절대값은 "0.92면 좋은 건가요?" 같은 오해를 만든다.
+화면에는 등급과 추천 근거 문장만 준다.
+</p>
+
+<hr class="chapter-break" />
+
+<!-- ===================== X.2 클러스터링 ===================== -->
+
+<h2 class="chapter"><span class="num">X.2</span>클러스터링</h2>
+
+<h3 class="section"><span class="num">X.2.1</span>목적</h3>
+<p>
+추천 시스템의 <strong>보조 신호</strong>로 쓴다. 용도는 세 가지다.
+</p>
+<ol>
+  <li>추천 카드 narrative 한 줄 (예: "환경공단 주력 공급사 풀")</li>
+  <li>4축 가중치의 BRN별 보정 (§X.1.4)</li>
+  <li>cold-start BRN의 K-NN 비교 기준</li>
+</ol>
+<p>
+군집 ID·silhouette 수치는 운영팀 화면에 안 띄운다.
+운영팀이 보는 건 <code>cluster_label</code> 한 줄뿐이다.
+</p>
+
+<h3 class="section"><span class="num">X.2.2</span>데이터</h3>
+<p>
+G2B 등록 BRN 중 환경공단 dminsttCd 10개 권역에 1건 이상 응찰·낙찰 이력이 있거나 동일 prefix4 시장에 등록된
+<strong>1,694개 BRN</strong>. <code>stg_award + mart_company_master + mart_company_sr</code> 조인 기준이며,
+컷오프 = 2026-04-29.
+</p>
+
+<h3 class="section"><span class="num">X.2.3</span>피처 (15개)</h3>
+<table>
+  <thead>
+    <tr><th style="width:18%">카테고리</th><th>피처</th><th>의미</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>낙찰 이력 (4)</td>
+        <td><code>env_award_count_total</code>, <code>env_award_amt_total_log</code>, <code>env_avg_rate</code>, <code>env_dminstt_count</code></td>
+        <td>누적 건수 · 금액(log) · 평균 낙찰률 · 권역 다양성</td></tr>
+    <tr><td>활동성 (3)</td>
+        <td><code>g2b_age_years</code>, <code>prefix4_diversity</code>, <code>main_prdct_consistency</code></td>
+        <td>등록기간 · 취급 품목 다양성 · 대표품목 집중도</td></tr>
+    <tr><td>제조·SR (4)</td>
+        <td><code>is_manufacturer_flag</code>, <code>sr_count</code>, <code>real_sr_flag</code>, <code>female_ceo_flag</code></td>
+        <td>제조업 · SR 인증수 · 실 인증 · 여성 대표</td></tr>
+    <tr><td>리스크 (4)</td>
+        <td><code>bid_lost_ratio</code>, <code>dormant_months</code>, <code>avg_unit_price_zscore</code>, <code>price_volatility</code></td>
+        <td>1순위 탈락률 · 휴면 개월 · 단가 z-score · 단가 변동성</td></tr>
+  </tbody>
+</table>
+<p style="font-size:13.5px;color:var(--muted)">
+금액 변수는 long-tail 분포 보정을 위해 log 변환. SR · 제조 · 여성대표는 0/1 플래그.
+</p>
+
+<h3 class="section"><span class="num">X.2.4</span>전처리: RobustScaler</h3>
+<p>
+환경공단에는 누적 50건 이상 낙찰받은 거대 BRN이 1% 미만 섞여 있다.
+표준 z-score면 이 이상치가 분포를 망친다.
+<strong>RobustScaler</strong>는 중앙값·IQR로 스케일링해서 그 영향을 줄인다.
+</p>
+
+<h3 class="section"><span class="num">X.2.5</span>차원축소: UMAP (학습 5D / 시각화 2D 분리)</h3>
+<ul>
+  <li><strong>왜 UMAP</strong> — t-SNE와 달리 fitted 모델로 신규 BRN을 transform할 수 있어 운영 추론에 쓸 수 있다. 지역·전역 구조도 함께 보존한다.</li>
+  <li><strong><code>n_neighbors = 15</code></strong> — 1,694의 약 1%. 더 작으면 노이즈에 흔들리고, 더 크면 글로벌 구조가 뭉개진다.</li>
+  <li><strong><code>min_dist = 0.1</code></strong> — 군집 내 밀집을 허용해 HDBSCAN 입력 품질을 높인다.</li>
+  <li><strong>5D ↔ 2D 분리 학습</strong> — 차원 수가 바뀌면 클러스터 ID도 달라진다. 학습용과 시각화용 UMAP을 따로 두는 이유다. 시각화는 산점도에만 쓴다.</li>
+</ul>
+
+<h3 class="section"><span class="num">X.2.6</span>클러스터링: HDBSCAN</h3>
+<table>
+  <thead>
+    <tr><th>후보</th><th class="center">채택</th><th>사유</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>DBSCAN</td><td class="center">X</td><td>단일 ε 가정 → 군집 밀도가 다른 시장(단골 vs 분산 등록사)에 부적합</td></tr>
+    <tr><td>KMeans</td><td class="center">△ (baseline)</td><td>구형 군집 + k 사전 지정 → 시장 구조 미지일 때 부적합</td></tr>
+    <tr><td><strong>HDBSCAN</strong></td><td class="center accent">✓</td><td>밀도 차이 자동 처리 + 노이즈 분리 + 군집수 데이터 결정</td></tr>
+  </tbody>
+</table>
+<p>
+<code>KMeans(k=8)</code> baseline을 병행 학습해 HDBSCAN 결과가 합리적인지 교차 점검했다.
+</p>
+
+<div class="callout">
+  <strong>하이퍼파라미터</strong>
+  <ul style="margin:6px 0 0">
+    <li><code>min_cluster_size = 30</code> — 1,694의 1.8%. narrative 라벨을 붙이려면 군집당 최소 30 BRN은 있어야 한다.</li>
+    <li><code>min_samples = 10</code> — core 표본 수. <code>min_cluster_size</code>의 1/3이 일반 권장값이다.</li>
+  </ul>
+</div>
+
+<h3 class="section"><span class="num">X.2.7</span>결과 및 검증</h3>
+<table>
+  <thead>
+    <tr><th>지표</th><th class="num">값</th><th>해석</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>군집 수</td><td class="num"><strong>12</strong></td><td>13개 raw 군집 중 노이즈 제외</td></tr>
+    <tr><td>노이즈 BRN</td><td class="num">50 (2.95%)</td><td>운영 허용 범위, 기본 가중치만 적용</td></tr>
+    <tr><td>Silhouette</td><td class="num accent"><strong>0.499</strong></td><td>군집 분리 명확 (&gt;0.5 양호, 0.25~0.5 합리적)</td></tr>
+    <tr><td>Davies-Bouldin</td><td class="num accent"><strong>0.660</strong></td><td>응집·분리 양호 (0.7 미만 권장)</td></tr>
+  </tbody>
+</table>
+
+<p>
+13개 raw 군집을 운영용으로 묶어서 <strong>4개 운영 그룹</strong>으로 재라벨링했다.
+</p>
+<ul>
+  <li><strong>real_sr</strong> (진짜 SR) — 장애인·사회적기업 인증을 실제 보유한 활성 풀.</li>
+  <li><strong>auto_sr</strong> (자동등록 SR) — 여성기업 자동판별 등 인증서 미보유 풀. 정책 가중 시 별도 검토 권장.</li>
+  <li><strong>veteran</strong> (환경공단 주력) — 누적 9억 이상 단골 제조사.</li>
+  <li><strong>dormant</strong> (활동중단) — 최근 24개월 무낙찰 BRN.</li>
+</ul>
+
+<h3 class="section"><span class="num">X.2.8</span>군집별 프로파일</h3>
+<p>
+1,694 BRN의 군집별 통계.
+<code>share</code>는 환경공단 누적 낙찰 약 2,813건 기준 점유율,
+<code>실 인증</code>은 장애인·사회적기업 인증 보유 BRN 수다.
+</p>
+
+<table class="profile">
+<thead>
+<tr>
+  <th class="num">cid</th>
+  <th>운영 그룹</th>
+  <th>군집 라벨</th>
+  <th class="num">BRN</th>
+  <th class="num">평균 건수</th>
+  <th class="num">평균 금액<br/>(억)</th>
+  <th class="num">share</th>
+  <th class="num">SR%</th>
+  <th class="num">실 인증</th>
+</tr>
+</thead>
+<tbody>
+<tr><td class="num">4</td><td><span class="grp veteran">veteran</span></td><td class="label">환경공단 주력 — 수처리 약품 (응집제·여과재) 제조사</td>
+    <td class="num">227</td><td class="num">3.2</td><td class="num">13.1</td><td class="num accent">26.2%</td><td class="num">20.3%</td><td class="num">12</td></tr>
+<tr><td class="num">3</td><td><span class="grp veteran">veteran</span></td><td class="label">환경공단 주력 — 전기 설비 (배전반·계장·UPS) 제조·유통</td>
+    <td class="num">103</td><td class="num">4.3</td><td class="num">9.0</td><td class="num accent">15.8%</td><td class="num">26.2%</td><td class="num">10</td></tr>
+<tr><td class="num">2</td><td><span class="grp veteran">veteran</span></td><td class="label">환경공단 주력 — 펌프·압축기 (수중펌프·공기압축기) 제조사</td>
+    <td class="num">50</td><td class="num">3.6</td><td class="num">7.9</td><td class="num">6.3%</td><td class="num">36.0%</td><td class="num">0</td></tr>
+<tr><td class="num">0</td><td><span class="grp veteran">veteran</span></td><td class="label">환경공단 주력 — 계측 장비 (계측기·수질분석기·유량계) 제조사</td>
+    <td class="num">38</td><td class="num">3.4</td><td class="num">9.6</td><td class="num">4.6%</td><td class="num">28.9%</td><td class="num">1</td></tr>
+<tr><td class="num">1</td><td><span class="grp auto">auto_sr</span></td><td class="label">여성 대표 자동등록 SR — 계측 장비 등록사 (실 인증 3%)</td>
+    <td class="num">242</td><td class="num">1.0</td><td class="num">0.8</td><td class="num">9.0%</td><td class="num">100%</td><td class="num">8</td></tr>
+<tr><td class="num">5</td><td><span class="grp real">real_sr</span></td><td class="label">장애인·사회적기업 100% — 펌프·압축기 제조·유통</td>
+    <td class="num">41</td><td class="num">1.1</td><td class="num">0.9</td><td class="num">1.6%</td><td class="num">100%</td><td class="num accent">41</td></tr>
+<tr><td class="num">8</td><td><span class="grp dormant">dormant</span></td><td class="label">최근 24개월 무낙찰 — 계측 장비 제조·유통 (등록 15년)</td>
+    <td class="num">320</td><td class="num">1.0</td><td class="num">5.8</td><td class="num">11.8%</td><td class="num">7.8%</td><td class="num">9</td></tr>
+<tr><td class="num">11</td><td><span class="grp dormant">dormant</span></td><td class="label">최근 33개월 무낙찰 — 계측 장비 유통 (등록 7년)</td>
+    <td class="num">189</td><td class="num">1.0</td><td class="num">0.4</td><td class="num">6.9%</td><td class="num">0.5%</td><td class="num">0</td></tr>
+<tr><td class="num">6</td><td><span class="grp dormant">dormant</span></td><td class="label">최근 37개월 무낙찰 — 건자재 (골재·목재) 제조사</td>
+    <td class="num">179</td><td class="num">1.0</td><td class="num">1.3</td><td class="num">6.5%</td><td class="num">0%</td><td class="num">0</td></tr>
+<tr><td class="num">9</td><td><span class="grp dormant">dormant</span></td><td class="label">최근 35개월 무낙찰 — 운반·물류 장비 제조사</td>
+    <td class="num">130</td><td class="num">1.0</td><td class="num">1.1</td><td class="num">4.7%</td><td class="num">0%</td><td class="num">0</td></tr>
+<tr><td class="num">10</td><td><span class="grp dormant">dormant</span></td><td class="label">최근 27개월 무낙찰 — 실험·분석 시약 유통</td>
+    <td class="num">76</td><td class="num">1.0</td><td class="num">1.2</td><td class="num">2.8%</td><td class="num">0%</td><td class="num">0</td></tr>
+<tr><td class="num">7</td><td><span class="grp dormant">dormant</span></td><td class="label">최근 27개월 무낙찰 — 산업용 가스 (산소·질소) 유통</td>
+    <td class="num">49</td><td class="num">1.0</td><td class="num">0.9</td><td class="num">1.8%</td><td class="num">0%</td><td class="num">0</td></tr>
+<tr><td class="num">−1</td><td><span class="grp noise">noise</span></td><td class="label">분류외 — outlier (개별 검토 대상)</td>
+    <td class="num">50</td><td class="num">1.1</td><td class="num">0.8</td><td class="num">2.0%</td><td class="num">12.0%</td><td class="num">3</td></tr>
+</tbody>
+</table>
+
+<h3 class="section"><span class="num">X.2.9</span>주요 발견</h3>
+
+<div class="evidence">
+  <div class="label">발견 1 — 단골 집중 (80/20)</div>
+  <p style="margin:0">
+  veteran 4 군집(cid 0·2·3·4)은 BRN의 <strong>24.5%(418개)</strong>뿐이다.
+  그런데 환경공단 누적 2,813건 중 <strong>52.9%(1,489건)</strong>를 가져간다.
+  <code>track_record 0.30</code> 가중치와 <code>supply +0.10</code> 보정(§X.1.4)의 근거가 이 분포다.
+  </p>
+</div>
+
+<div class="evidence">
+  <div class="label">발견 2 — 수처리 약품이 단일 최대 카테고리</div>
+  <p style="margin:0">
+  cid 4(수처리 약품 단골) 단독으로 환경공단 누적의 <strong>26.2%(736건)</strong>,
+  한 곳당 평균 <strong>13.1억</strong>이다.
+  단일 도메인으로 가장 굵은 거래가 몰린 군집이다.
+  점수 모델 가중치 조정이 여기서 가장 먼저 체감된다.
+  <code>pipeline/item_keywords.py</code> prefix4 매핑을 분기 1회 검토해야 하는 이유다.
+  </p>
+</div>
+
+<div class="evidence">
+  <div class="label">발견 3 — 활동중단 풀이 절반 이상</div>
+  <p style="margin:0">
+  dormant 6 군집(cid 6·7·8·9·10·11)이 전체 BRN의 <strong>55.6%(943개)</strong>다.
+  클러스터 보정 없이 <code>sr_count</code>·<code>track_record</code>만으로 점수를 매기면
+  추천 명단 절반이 휴면 BRN으로 오염된다.
+  그래서 <code>dormant</code> 라벨에 <code>supply −0.10 · sr −0.05 · price +0.15</code> 보정을 건다(§X.1.4).
+  </p>
+</div>
+
+<div class="evidence">
+  <div class="label">발견 4 — 여성 대표 자동등록 SR의 거짓신호</div>
+  <p style="margin:0">
+  cid 1(여성 자동등록 SR)은 <strong>242개</strong>로 두 번째로 크고 SR 인정 100%다.
+  그런데 실 인증은 <strong>3.3%(8개)</strong>뿐이다.
+  <code>sr_count</code>만 보면 정책 효과를 거짓으로 잡는다.
+  <code>real_sr_flag</code>와 4분류 운영 그룹(real_sr / auto_sr / veteran / dormant)을 둔 이유다.
+  </p>
+</div>
+
+<div class="evidence">
+  <div class="label">발견 5 — 진짜 SR 풀의 규모와 활용</div>
+  <p style="margin:0">
+  cid 5(장애인·사회적기업 100%)는 <strong>41 BRN</strong>으로 작다. 실 인증은 <strong>41/41(100%)</strong>,
+  한 곳당 평균 0.9억이다. 정책 의무 달성의 핵심 풀이다.
+  <code>real_sr</code> 군집에 <code>sr +0.10 · price −0.10</code> 보정을 적용해 추천 풀 진입을 보장한다.
+  cold-start 보강 K-NN(장애인기업 6,308개 중 활성 27개 비교 기준)도 이 풀을 넓히기 위한 보조 장치다.
+  </p>
+</div>
+
+<div class="evidence">
+  <div class="label">발견 6 — 노이즈는 outlier 로 분리</div>
+  <p style="margin:0">
+  cid −1, <strong>50개(2.95%)</strong>는 활동성·도메인이 어느 군집에도 안정적으로 안 묶였다.
+  자동 분류에서 제외하고, 추천 시 기본 가중치(0.35 / 0.30 / 0.20 / 0.15)만 적용한다.
+  운영자 개별 검토 대상이다.
+  </p>
+</div>
+
+<h3 class="section"><span class="num">X.2.10</span>한계 및 후속</h3>
+<ul>
+  <li><strong>데이터 양</strong> — 449 winners 기준 임베딩은 cold-start BRN을 잘 못 다룬다. 보조 K-NN(장애인기업 6,308개 중 활성 27개 비교 기준)이 이 약점을 보완한다.</li>
+  <li><strong>시간 변화</strong> — 휴면 BRN이 재활동하면 클러스터 재할당이 늦는다. <em>분기 1회 재학습</em>을 권장한다.</li>
+  <li><strong>Phase 3 후보</strong> — Two-Tower / LightGCN 임베딩으로 교체해 cold-start와 시간 변화를 함께 다루는 안.</li>
+</ul>
+
+<footer class="colophon">
+  본 문서는 <code>pipeline/ranker.py</code> · <code>pipeline/clustering.py</code> · <code>artifacts/clustering_metrics.json</code> 의 코드·지표를 직접 인용하여 작성되었으며,
+  분석 모집단 · 가중치 · 하이퍼파라미터 변경 시 함께 갱신되어야 한다.
+</footer>
+
+</main>
+
+</body>
+</html>
