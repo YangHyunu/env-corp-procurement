@@ -26,14 +26,60 @@ DEFAULT_WEIGHTS: dict[str, float] = {
 }
 
 
+# 클러스터 라벨 → 4축 가중치 보정 (합=0 유지, 절대값 ≤ 0.15)
+# 라벨 텍스트는 pipeline.clustering._label_cluster 산출과 부합하는 키워드로 매칭.
+def _cluster_weight_delta(cluster_label: str | None) -> dict[str, float]:
+    """cluster_label → 4축 가중치 delta. None / 미인식이면 영행렬."""
+    zero = {"sr_diversity": 0.0, "track_record": 0.0,
+            "price_competitiveness": 0.0, "supply_stability": 0.0}
+    if not cluster_label:
+        return zero
+    label = cluster_label
+    # "환경공단 주력 공급사" — supply +0.10, track_record -0.10
+    if "환경공단 주력" in label:
+        return {"sr_diversity": 0.0, "track_record": -0.10,
+                "price_competitiveness": 0.0, "supply_stability": 0.10}
+    # real_sr / 장애인·사회적기업 — sr +0.10, price -0.10
+    if "장애인·사회적기업" in label or "장애인" in label or "사회적기업" in label:
+        return {"sr_diversity": 0.10, "track_record": 0.0,
+                "price_competitiveness": -0.10, "supply_stability": 0.0}
+    # dormant / 활동중단 — supply -0.10, sr -0.05, price +0.15
+    if "무낙찰" in label or "활동중단" in label or "분류외" in label:
+        return {"sr_diversity": -0.05, "track_record": 0.0,
+                "price_competitiveness": 0.15, "supply_stability": -0.10}
+    return zero
+
+
+def _apply_cluster_adjustment(
+    base_weights: dict[str, float], cluster_label: str | None,
+) -> dict[str, float]:
+    """기본 가중치 + 클러스터 보정 → 새 가중치 (합=1.0 유지)."""
+    delta = _cluster_weight_delta(cluster_label)
+    adjusted = {k: base_weights[k] + delta[k] for k in base_weights}
+    # SR 법정 하한 floor
+    if adjusted["sr_diversity"] < SR_LEGAL_FLOOR_FRACTION:
+        adjusted["sr_diversity"] = SR_LEGAL_FLOOR_FRACTION
+    # 음수 방지
+    for k in adjusted:
+        if adjusted[k] < 0.0:
+            adjusted[k] = 0.0
+    # 재정규화 (합=1.0)
+    s = sum(adjusted.values())
+    if s > 0:
+        adjusted = {k: v / s for k, v in adjusted.items()}
+    return adjusted
+
+
 class Ranker(Protocol):
     """Stage 2 ranker 인터페이스 — RuleRanker / 향후 LGBMRanker 둘 다 구현."""
     def score(
         self,
         candidates: list[dict[str, Any]],
         context: dict[str, Any] | None = None,
+        cluster_labels: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
-        """후보별 점수 매김. 입력 dict 에 score / axes / is_sr_demoted 추가해 반환."""
+        """후보별 점수 매김. 입력 dict 에 rule_score / axes / is_sr_demoted /
+        score_used 추가해 반환. cluster_labels (BRN→label) 가 주어지면 가중치 보정."""
         ...
 
 
@@ -58,12 +104,19 @@ class RuleRanker:
         self,
         candidates: list[dict[str, Any]],
         context: dict[str, Any] | None = None,
+        cluster_labels: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
+        """후보 점수 계산.
+
+        cluster_labels: {brn → cluster_label} dict. 주어지면 BRN별 가중치를
+        클러스터 라벨에 따라 조정 (합=1.0 유지). None이면 default_weights 단일 사용.
+        """
         if not candidates:
             return []
 
         df = pd.DataFrame(candidates).copy()
         n = len(df)
+        cluster_labels = cluster_labels or {}
 
         # Axis 1: supply_stability — pool 내 award_count 백분위
         df["rank_award_count"] = df["award_count"].rank(method="min", ascending=False)
@@ -94,14 +147,28 @@ class RuleRanker:
         else:
             df["axis_price_competitiveness"] = 0.5
 
-        # 가중합
-        w = self.weights
-        df["composite_score"] = (
-            w["supply_stability"]      * df["axis_supply_stability"]
-            + w["sr_diversity"]        * df["axis_sr_diversity"]
-            + w["track_record"]        * df["axis_track_record"]
-            + w["price_competitiveness"] * df["axis_price_competitiveness"]
-        )
+        # 가중합 — BRN별 클러스터 라벨로 가중치 조정 (없으면 default)
+        # 성능: cluster_labels 비어있으면 단일 가중치 fast-path
+        if cluster_labels:
+            brn_to_label = cluster_labels
+            adjusted_per_row = df["brn"].astype(str).map(
+                lambda b: _apply_cluster_adjustment(self.weights, brn_to_label.get(b))
+            )
+            df["composite_score"] = [
+                (w["supply_stability"]      * row["axis_supply_stability"]
+                 + w["sr_diversity"]        * row["axis_sr_diversity"]
+                 + w["track_record"]        * row["axis_track_record"]
+                 + w["price_competitiveness"] * row["axis_price_competitiveness"])
+                for w, (_, row) in zip(adjusted_per_row, df.iterrows())
+            ]
+        else:
+            w = self.weights
+            df["composite_score"] = (
+                w["supply_stability"]      * df["axis_supply_stability"]
+                + w["sr_diversity"]        * df["axis_sr_diversity"]
+                + w["track_record"]        * df["axis_track_record"]
+                + w["price_competitiveness"] * df["axis_price_competitiveness"]
+            )
 
         # SR soft floor — n_sr_certified ≥ 3 일 때 sr_count=0 demote
         n_sr_cert = int((df["sr_count"] > 0).sum())
@@ -124,5 +191,6 @@ class RuleRanker:
                     "price_competitiveness": float(row["axis_price_competitiveness"]),
                 },
                 "is_sr_demoted": bool(row["is_sr_demoted"]),
+                "score_used": "rule",
             })
         return out

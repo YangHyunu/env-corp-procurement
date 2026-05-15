@@ -121,6 +121,21 @@ export function RecommendationCard({
           {item.badges.map((b) => (
             <SrBadge key={b} label={b} />
           ))}
+          {item.cluster_label != null && (
+            <span
+              style={{
+                fontSize: 9,
+                padding: '2px 7px',
+                borderRadius: 5,
+                fontWeight: 700,
+                letterSpacing: '0.01em',
+                background: '#e0f2fe',
+                color: '#0369a1',
+              }}
+            >
+              {item.cluster_label}
+            </span>
+          )}
         </div>
 
         {/* 메타 */}
@@ -137,6 +152,20 @@ export function RecommendationCard({
           {stats.lost_count > 0 ? ` · 탈락 ${stats.lost_count}` : ''}
           {stats.last_award_at ? ` · 최근 ${stats.last_award_at.slice(0, 7)}` : ''}
         </div>
+
+        {/* KNN 유사 사례 */}
+        {item.knn_similar_corp_name != null && item.knn_similarity != null && (
+          <div
+            style={{
+              fontSize: 10,
+              color: '#6b7280',
+              marginTop: 3,
+              fontStyle: 'italic',
+            }}
+          >
+            유사 사례: {item.knn_similar_corp_name} 와 {Math.round(item.knn_similarity * 100)}% 유사
+          </div>
+        )}
       </div>
 
       {/* 우측 가격/점수 */}

@@ -218,6 +218,12 @@ class RecommendationV2Item(BaseModel):
     axes: dict[str, float]           # 4축 weighted_segments — RuleRanker.score 계산
     ml_score: float | None = None    # (B) LGBM 도입 시 채워짐
     score_used: str = "rule"
+    # 클러스터링 / K-NN 흡수 (운영팀에 raw 수치 노출 X — 카드 narrative 보조용)
+    cluster_id: int | None = None
+    cluster_label: str | None = None
+    knn_similar_brn: str | None = None
+    knn_similar_corp_name: str | None = None
+    knn_similarity: float | None = None     # 0.0~1.0
     reason: str
 
 

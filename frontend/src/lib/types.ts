@@ -120,6 +120,11 @@ export interface RecommendationV2Item {
   ml_score: number | null
   score_used: string
   reason: string
+  cluster_label: string | null
+  cluster_id: number | null
+  knn_similar_brn: string | null
+  knn_similar_corp_name: string | null
+  knn_similarity: number | null
 }
 
 export interface RecommendV2Response {
