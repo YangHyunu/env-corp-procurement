@@ -131,6 +131,10 @@ class ExpectedPrice(BaseModel):
     n_samples: int                   # 추정에 사용된 표본 (유사 규모 우선)
     n_samples_overall: int = 0       # BRN 전체 거래 건수 (참고)
     is_extrapolated: bool = False    # BRN 유사 규모 거래 부재 → 외삽 경고
+    # 시장 분위수 — n_market_scale ≥ 3 일 때만 채워짐, 나머지는 None (backward-compatible)
+    market_q25_million: float | None = None
+    market_q50_million: float | None = None
+    market_q75_million: float | None = None
 
 
 class RiskInfo(BaseModel):

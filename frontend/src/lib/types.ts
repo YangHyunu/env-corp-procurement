@@ -25,6 +25,10 @@ export interface ExpectedPrice {
   n_samples: number
   n_samples_overall?: number
   is_extrapolated?: boolean
+  // 시장 분위수 (n_market_scale >= 3 일 때만 채워짐)
+  market_q25_million?: number | null
+  market_q50_million?: number | null
+  market_q75_million?: number | null
 }
 
 export interface RiskInfo {

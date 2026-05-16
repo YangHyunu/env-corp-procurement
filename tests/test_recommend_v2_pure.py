@@ -95,41 +95,64 @@ class TestDormantMonths(unittest.TestCase):
 
 
 class TestMakeExpectedPrice(unittest.TestCase):
+    """_make_expected_price(budget_won, dist, dist_at_scale, market, market_at_scale) 테스트.
+
+    dist/dist_at_scale: BRN 전체/유사 규모 분포
+    market/market_at_scale: 시장 전체/유사 규모 baseline
+    """
+
     def test_full_when_n_samples_ge_3(self):
         budget_won = 1_000_000_000  # 10억
-        dist = {"n": 5, "mean": 90.0, "q25": 85.0, "q75": 95.0, "std": 3.0}
+        # 유사 규모 n≥3 → Fallback 1 (가장 정확)
+        dist_at_scale = {"n": 5, "mean": 90.0, "q25": 85.0, "q75": 95.0, "std": 3.0}
+        dist = {"n": 5, "mean": 90.0}
+        market_at_scale = {"n": 10, "mean": 92.0, "q25": 88.0, "q50": 91.0, "q75": 94.0}
         market = {"mean": 92.0}
-        ep = _make_expected_price(budget_won, dist, market)
+        ep = _make_expected_price(budget_won, dist, dist_at_scale, market, market_at_scale)
         self.assertEqual(ep["n_samples"], 5)
         self.assertEqual(ep["point"], 900_000_000)
         self.assertEqual(ep["q25"], 850_000_000)
         self.assertEqual(ep["q75"], 950_000_000)
         self.assertEqual(ep["sigma_pp"], 3.0)
         self.assertEqual(ep["market_diff_pp"], -2.0)
+        # 시장 분위수 — market_at_scale n≥3 → 채워짐
+        self.assertIsNotNone(ep["market_q25_million"])
+        self.assertIsNotNone(ep["market_q50_million"])
+        self.assertIsNotNone(ep["market_q75_million"])
 
     def test_no_interval_when_n_samples_lt_3(self):
         budget_won = 1_000_000_000
-        dist = {"n": 2, "mean": 90.0, "q25": 85.0, "q75": 95.0, "std": 3.0}
+        # 유사 규모 n=2 → Fallback 2 (점추정만 — sigma/q25/q75 X)
+        dist_at_scale = {"n": 2, "mean": 90.0, "q25": 85.0, "q75": 95.0, "std": 3.0}
+        dist = {"n": 2, "mean": 90.0}
+        market_at_scale = {"n": 0}
         market = {"mean": 92.0}
-        ep = _make_expected_price(budget_won, dist, market)
+        ep = _make_expected_price(budget_won, dist, dist_at_scale, market, market_at_scale)
         self.assertEqual(ep["n_samples"], 2)
         self.assertEqual(ep["point"], 900_000_000)  # uses BRN mean (n>=1)
         self.assertIsNone(ep["q25"])
         self.assertIsNone(ep["q75"])
         self.assertIsNone(ep["sigma_pp"])
-        self.assertIsNone(ep["market_diff_pp"])
+        # n=2, extrapolated=False, ref_market_mean=92.0 → market_diff_pp 계산됨 (정상 동작)
+        self.assertEqual(ep["market_diff_pp"], -2.0)
+        # market_at_scale n=0 → 시장 분위수 None
+        self.assertIsNone(ep["market_q25_million"])
+        self.assertIsNone(ep["market_q50_million"])
+        self.assertIsNone(ep["market_q75_million"])
 
     def test_market_fallback_when_brn_dist_empty(self):
         budget_won = 1_000_000_000
         dist = {}  # no BRN samples
+        dist_at_scale = {}
+        market_at_scale = {}
         market = {"mean": 88.0}
-        ep = _make_expected_price(budget_won, dist, market)
+        ep = _make_expected_price(budget_won, dist, dist_at_scale, market, market_at_scale)
         self.assertEqual(ep["n_samples"], 0)
         self.assertEqual(ep["point"], 880_000_000)  # market mean
 
     def test_budget_fallback_when_both_empty(self):
         budget_won = 500_000_000
-        ep = _make_expected_price(budget_won, dist={}, market={})
+        ep = _make_expected_price(budget_won, dist={}, dist_at_scale={}, market={}, market_at_scale={})
         self.assertEqual(ep["n_samples"], 0)
         self.assertEqual(ep["point"], budget_won)
 
@@ -230,7 +253,7 @@ class TestRecommendBaselineRegression(unittest.TestCase):
         from pipeline.recommend_v2 import RecommendV2Request, recommend  # noqa: E402
         cls._cases = CASES
         cls._sr = SR_FILTER_NO
-        cls._snapshot = _snapshot_response
+        cls._snapshot = staticmethod(_snapshot_response)
         cls._recommend = staticmethod(recommend)
         cls._req_cls = RecommendV2Request
         cls._baseline = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))

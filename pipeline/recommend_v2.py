@@ -373,6 +373,7 @@ def _market_baseline_at_scale(
       COUNT(*) AS n,
       AVG(a.sucsfbid_rate)  AS mean,
       PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY a.sucsfbid_rate) AS q25,
+      PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY a.sucsfbid_rate) AS q50,
       PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY a.sucsfbid_rate) AS q75,
       STDDEV(a.sucsfbid_rate) AS std
     FROM stg_award a
@@ -393,6 +394,7 @@ def _market_baseline_at_scale(
         "n": int(r.get("n") or 0),
         "mean": float(r["mean"]) if r.get("mean") is not None else None,
         "q25":  float(r["q25"])  if r.get("q25")  is not None else None,
+        "q50":  float(r["q50"])  if r.get("q50")  is not None else None,
         "q75":  float(r["q75"])  if r.get("q75")  is not None else None,
         "std":  float(r["std"])  if r.get("std")  is not None else None,
     }
@@ -641,6 +643,22 @@ def _make_expected_price(
 
     n_used = n_scale if n_scale > 0 else (n_market_scale if n_market_scale >= 3 else n_full)
 
+    # 시장 분위수 (예산 ±50% 범위, n_market_scale ≥ 3 일 때만 산출)
+    mq25_million: float | None = None
+    mq50_million: float | None = None
+    mq75_million: float | None = None
+    if n_market_scale >= 3:
+        budget_million = budget_won / 1_000_000
+        mq25_rate = market_at_scale.get("q25")
+        mq50_rate = market_at_scale.get("q50")
+        mq75_rate = market_at_scale.get("q75")
+        if mq25_rate is not None:
+            mq25_million = round(budget_million * float(mq25_rate) / 100.0, 1)
+        if mq50_rate is not None:
+            mq50_million = round(budget_million * float(mq50_rate) / 100.0, 1)
+        if mq75_rate is not None:
+            mq75_million = round(budget_million * float(mq75_rate) / 100.0, 1)
+
     return {
         "point": point,
         "point_million": _to_million(point),
@@ -651,6 +669,9 @@ def _make_expected_price(
         "n_samples": n_used,
         "n_samples_overall": n_full,
         "is_extrapolated": extrapolated,
+        "market_q25_million": mq25_million,
+        "market_q50_million": mq50_million,
+        "market_q75_million": mq75_million,
     }
 
 

@@ -33,7 +33,47 @@
         "corp_name": "시소커뮤니케이션",
         "ml_score": null,
         "rank": 1,
-        "rule_score": 0.5320561016181229,
+        "rule_score": 0.5681884258899677,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.5631067961165048,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.883495145631068,
+          "track_record": 0.540937
+        },
+        "badges": [
+          "중소기업",
+          "부산",
+          "여성기업"
+        ],
+        "brn": "6098178075",
+        "corp_name": "더펜상사주식회사",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.5583492122977346,
+        "score_used": "rule",
+        "tier": "C"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.06796116504854366,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.9902912621359223,
+          "track_record": 0.788267
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "8338700207",
+        "corp_name": "케이앤제이엔지니어링주식회사",
+        "ml_score": null,
+        "rank": 3,
+        "rule_score": 0.5354851152103559,
         "score_used": "rule",
         "tier": "B"
       },
@@ -52,7 +92,7 @@
         "brn": "2228124130",
         "corp_name": "대진정보통신 주식회사",
         "ml_score": null,
-        "rank": 2,
+        "rank": 4,
         "rule_score": 0.5265870550161813,
         "score_used": "rule",
         "tier": "B"
@@ -72,50 +112,10 @@
         "brn": "5341402018",
         "corp_name": "이서환경",
         "ml_score": null,
-        "rank": 3,
+        "rank": 5,
         "rule_score": 0.5246453074433657,
         "score_used": "rule",
         "tier": "C"
-      },
-      {
-        "axes": {
-          "price_competitiveness": 0.5631067961165048,
-          "sr_diversity": 0.3333333333333333,
-          "supply_stability": 0.883495145631068,
-          "track_record": 0.540937
-        },
-        "badges": [
-          "중소기업",
-          "부산",
-          "여성기업"
-        ],
-        "brn": "6098178075",
-        "corp_name": "더펜상사주식회사",
-        "ml_score": null,
-        "rank": 4,
-        "rule_score": 0.5240933977346278,
-        "score_used": "rule",
-        "tier": "C"
-      },
-      {
-        "axes": {
-          "price_competitiveness": 0.06796116504854366,
-          "sr_diversity": 0.3333333333333333,
-          "supply_stability": 0.9902912621359223,
-          "track_record": 0.788267
-        },
-        "badges": [
-          "중소기업",
-          "경기도",
-          "여성기업"
-        ],
-        "brn": "8338700207",
-        "corp_name": "케이앤제이엔지니어링주식회사",
-        "ml_score": null,
-        "rank": 5,
-        "rule_score": 0.5152826889967637,
-        "score_used": "rule",
-        "tier": "B"
       }
     ]
   },
@@ -153,7 +153,7 @@
         "corp_name": "주식회사 스마트파워",
         "ml_score": null,
         "rank": 1,
-        "rule_score": 0.5665985666666666,
+        "rule_score": 0.5666212666666666,
         "score_used": "rule",
         "tier": "B"
       },
@@ -172,7 +172,7 @@
         "corp_name": "주식회사 디엠티",
         "ml_score": null,
         "rank": 2,
-        "rule_score": 0.4613333333333334,
+        "rule_score": 0.5155,
         "score_used": "rule",
         "tier": "B"
       },
@@ -191,7 +191,7 @@
         "corp_name": "주식회사 제이씨",
         "ml_score": null,
         "rank": 3,
-        "rule_score": 0.44398026666666673,
+        "rule_score": 0.48564693333333336,
         "score_used": "rule",
         "tier": "B"
       },
@@ -210,7 +210,7 @@
         "corp_name": "(주) 대경산전",
         "ml_score": null,
         "rank": 4,
-        "rule_score": 0.4355084,
+        "rule_score": 0.46117226666666666,
         "score_used": "rule",
         "tier": "B"
       },
@@ -229,7 +229,7 @@
         "corp_name": "(주)썬테크",
         "ml_score": null,
         "rank": 5,
-        "rule_score": 0.42595160000000004,
+        "rule_score": 0.45511826666666666,
         "score_used": "rule",
         "tier": "B"
       }
@@ -256,25 +256,6 @@
     "recommendations": [
       {
         "axes": {
-          "price_competitiveness": 0.0,
-          "sr_diversity": 0.0,
-          "supply_stability": 1.0,
-          "track_record": 0.9990186666666667
-        },
-        "badges": [
-          "중소기업",
-          "인천"
-        ],
-        "brn": "1318178005",
-        "corp_name": "주식회사 대경에스코",
-        "ml_score": null,
-        "rank": 1,
-        "rule_score": 0.44970560000000004,
-        "score_used": "rule",
-        "tier": "B"
-      },
-      {
-        "axes": {
           "price_competitiveness": 0.8,
           "sr_diversity": 0.0,
           "supply_stability": 0.8,
@@ -287,8 +268,27 @@
         "brn": "1308102064",
         "corp_name": "주식회사 부-스타",
         "ml_score": null,
+        "rank": 1,
+        "rule_score": 0.48562879999999997,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.0,
+          "sr_diversity": 0.0,
+          "supply_stability": 1.0,
+          "track_record": 0.9990186666666667
+        },
+        "badges": [
+          "중소기업",
+          "인천"
+        ],
+        "brn": "1318178005",
+        "corp_name": "주식회사 대경에스코",
+        "ml_score": null,
         "rank": 2,
-        "rule_score": 0.44562880000000005,
+        "rule_score": 0.44980373333333334,
         "score_used": "rule",
         "tier": "B"
       },
@@ -307,7 +307,7 @@
         "corp_name": "대림로얄이앤피(주)",
         "ml_score": null,
         "rank": 3,
-        "rule_score": 0.4020756,
+        "rule_score": 0.4120756,
         "score_used": "rule",
         "tier": "B"
       },
@@ -326,7 +326,7 @@
         "corp_name": "신한열기 주식회사",
         "ml_score": null,
         "rank": 4,
-        "rule_score": 0.3659072,
+        "rule_score": 0.34590719999999997,
         "score_used": "rule",
         "tier": "B"
       },
@@ -345,9 +345,9 @@
         "corp_name": "주식회사 한국종합플랜트",
         "ml_score": null,
         "rank": 5,
-        "rule_score": 0.3399484,
+        "rule_score": 0.2899484,
         "score_used": "rule",
-        "tier": "B"
+        "tier": "C"
       }
     ]
   },
@@ -413,26 +413,6 @@
       },
       {
         "axes": {
-          "price_competitiveness": 0.775,
-          "sr_diversity": 0.3333333333333333,
-          "supply_stability": 0.8625,
-          "track_record": 0.40192200000000006
-        },
-        "badges": [
-          "중소기업",
-          "전라남",
-          "장애인기업"
-        ],
-        "brn": "4100198936",
-        "corp_name": "태산 ENG",
-        "ml_score": null,
-        "rank": 3,
-        "rule_score": 0.5216182666666667,
-        "score_used": "rule",
-        "tier": "B"
-      },
-      {
-        "axes": {
           "price_competitiveness": 0.7625,
           "sr_diversity": 0.3333333333333333,
           "supply_stability": 0.8625,
@@ -446,7 +426,7 @@
         "brn": "2893001481",
         "corp_name": "서온상사",
         "ml_score": null,
-        "rank": 4,
+        "rank": 3,
         "rule_score": 0.5185416666666667,
         "score_used": "rule",
         "tier": "B"
@@ -466,8 +446,28 @@
         "brn": "6147100487",
         "corp_name": "다은컴퍼니",
         "ml_score": null,
-        "rank": 5,
+        "rank": 4,
         "rule_score": 0.49821666666666664,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.26249999999999996,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.95,
+          "track_record": 0.452935
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "6058143424",
+        "corp_name": "주식회사지텍",
+        "ml_score": null,
+        "rank": 5,
+        "rule_score": 0.4972536666666666,
         "score_used": "rule",
         "tier": "B"
       }
@@ -507,7 +507,7 @@
         "corp_name": "주식회사 이앤에프",
         "ml_score": null,
         "rank": 1,
-        "rule_score": 0.5640320666666666,
+        "rule_score": 0.5849102666666666,
         "score_used": "rule",
         "tier": "B"
       },
@@ -527,7 +527,7 @@
         "corp_name": "광명기전(주)",
         "ml_score": null,
         "rank": 2,
-        "rule_score": 0.4727915999999999,
+        "rule_score": 0.4951944,
         "score_used": "rule",
         "tier": "B"
       },
@@ -626,9 +626,29 @@
         "corp_name": "주식회사 에이스엔지니어링",
         "ml_score": null,
         "rank": 1,
-        "rule_score": 0.6053658791341991,
+        "rule_score": 0.6394358386147185,
         "score_used": "rule",
         "tier": "A"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.09090909090909094,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.9545454545454546,
+          "track_record": 0.6776377142857144
+        },
+        "badges": [
+          "중소기업",
+          "강원",
+          "여성기업"
+        ],
+        "brn": "4598700203",
+        "corp_name": "(주)태연테크",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.5090123913419913,
+        "score_used": "rule",
+        "tier": "B"
       },
       {
         "axes": {
@@ -645,8 +665,28 @@
         "brn": "5503201432",
         "corp_name": "지온테크",
         "ml_score": null,
-        "rank": 2,
-        "rule_score": 0.4917973341991342,
+        "rank": 3,
+        "rule_score": 0.5076628692640692,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.2727272727272727,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.8636363636363636,
+          "track_record": 0.5283635714285714
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "6058143424",
+        "corp_name": "주식회사지텍",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.49279392640692643,
         "score_used": "rule",
         "tier": "B"
       },
@@ -665,48 +705,8 @@
         "brn": "5508702203",
         "corp_name": "주식회사 웰스테크",
         "ml_score": null,
-        "rank": 3,
-        "rule_score": 0.4890268432900433,
-        "score_used": "rule",
-        "tier": "B"
-      },
-      {
-        "axes": {
-          "price_competitiveness": 0.9545454545454546,
-          "sr_diversity": 0.3333333333333333,
-          "supply_stability": 0.3181818181818182,
-          "track_record": 0.4428571428571429
-        },
-        "badges": [
-          "중소기업",
-          "경기도",
-          "여성기업"
-        ],
-        "brn": "5438101257",
-        "corp_name": "주식회사 와이제이엔텍",
-        "ml_score": null,
-        "rank": 4,
-        "rule_score": 0.4881601731601731,
-        "score_used": "rule",
-        "tier": "C"
-      },
-      {
-        "axes": {
-          "price_competitiveness": 0.09090909090909094,
-          "sr_diversity": 0.3333333333333333,
-          "supply_stability": 0.9545454545454546,
-          "track_record": 0.6776377142857144
-        },
-        "badges": [
-          "중소기업",
-          "강원",
-          "여성기업"
-        ],
-        "brn": "4598700203",
-        "corp_name": "(주)태연테크",
-        "ml_score": null,
         "rank": 5,
-        "rule_score": 0.4813216173160173,
+        "rule_score": 0.4890268432900433,
         "score_used": "rule",
         "tier": "B"
       }
@@ -754,26 +754,6 @@
       },
       {
         "axes": {
-          "price_competitiveness": 0.30434782608695654,
-          "sr_diversity": 0.3333333333333333,
-          "supply_stability": 0.991304347826087,
-          "track_record": 0.9242653454545454
-        },
-        "badges": [
-          "중소기업",
-          "충청북",
-          "장애인기업"
-        ],
-        "brn": "7728601563",
-        "corp_name": "더블유아이엠주식회사",
-        "ml_score": null,
-        "rank": 2,
-        "rule_score": 0.6035114876943346,
-        "score_used": "rule",
-        "tier": "A"
-      },
-      {
-        "axes": {
           "price_competitiveness": 0.6521739130434783,
           "sr_diversity": 0.3333333333333333,
           "supply_stability": 0.9565217391304348,
@@ -787,8 +767,8 @@
         "brn": "1308686787",
         "corp_name": "성광수중펌프 주식회사",
         "ml_score": null,
-        "rank": 3,
-        "rule_score": 0.6003347283267457,
+        "rank": 2,
+        "rule_score": 0.6260685628458498,
         "score_used": "rule",
         "tier": "A"
       },
@@ -807,30 +787,50 @@
         "brn": "1408148640",
         "corp_name": "주식회사 서광부스타이엔지",
         "ml_score": null,
-        "rank": 4,
-        "rule_score": 0.5907634192358366,
+        "rank": 3,
+        "rule_score": 0.6191079799736495,
         "score_used": "rule",
-        "tier": "B"
+        "tier": "A"
       },
       {
         "axes": {
-          "price_competitiveness": 0.4347826086956522,
+          "price_competitiveness": 0.30434782608695654,
           "sr_diversity": 0.3333333333333333,
-          "supply_stability": 0.9739130434782609,
-          "track_record": 0.7491621818181817
+          "supply_stability": 0.991304347826087,
+          "track_record": 0.9242653454545454
         },
         "badges": [
           "중소기업",
-          "강원",
+          "충청북",
+          "장애인기업"
+        ],
+        "brn": "7728601563",
+        "corp_name": "더블유아이엠주식회사",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.6102153879314888,
+        "score_used": "rule",
+        "tier": "A"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.7217391304347827,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.8956521739130435,
+          "track_record": 0.5807848181818182
+        },
+        "badges": [
+          "중소기업",
+          "대구",
           "여성기업"
         ],
-        "brn": "6848101091",
-        "corp_name": "주식회사 청림",
+        "brn": "5022625977",
+        "corp_name": "뉴월드",
         "ml_score": null,
         "rank": 5,
-        "rule_score": 0.5744587994729907,
+        "rule_score": 0.6010844998682477,
         "score_used": "rule",
-        "tier": "B"
+        "tier": "A"
       }
     ]
   },
@@ -868,9 +868,28 @@
         "corp_name": "(주)대성그린테크",
         "ml_score": null,
         "rank": 1,
-        "rule_score": 0.6062354666666667,
+        "rule_score": 0.6063792,
         "score_used": "rule",
         "tier": "A"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.9333333333333333,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.6666666666666666,
+          "track_record": 0.595996
+        },
+        "badges": [
+          "대기업",
+          "서울"
+        ],
+        "brn": "1758801164",
+        "corp_name": "효성화학(주)",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.5387987999999999,
+        "score_used": "rule",
+        "tier": "B"
       },
       {
         "axes": {
@@ -886,8 +905,8 @@
         "brn": "1138132812",
         "corp_name": "원웅엔지니어링 주식회사",
         "ml_score": null,
-        "rank": 2,
-        "rule_score": 0.5290561333333333,
+        "rank": 3,
+        "rule_score": 0.5338152,
         "score_used": "rule",
         "tier": "B"
       },
@@ -905,27 +924,8 @@
         "brn": "4158601447",
         "corp_name": "주식회사 대하산업",
         "ml_score": null,
-        "rank": 3,
-        "rule_score": 0.515708,
-        "score_used": "rule",
-        "tier": "B"
-      },
-      {
-        "axes": {
-          "price_competitiveness": 0.9333333333333333,
-          "sr_diversity": 0.0,
-          "supply_stability": 0.6666666666666666,
-          "track_record": 0.595996
-        },
-        "badges": [
-          "대기업",
-          "서울"
-        ],
-        "brn": "1758801164",
-        "corp_name": "효성화학(주)",
-        "ml_score": null,
         "rank": 4,
-        "rule_score": 0.46546546666666666,
+        "rule_score": 0.5271386666666666,
         "score_used": "rule",
         "tier": "B"
       },
@@ -944,7 +944,7 @@
         "corp_name": "기림환경산업 주식회사",
         "ml_score": null,
         "rank": 5,
-        "rule_score": 0.4391061333333333,
+        "rule_score": 0.5024394666666666,
         "score_used": "rule",
         "tier": "B"
       }
