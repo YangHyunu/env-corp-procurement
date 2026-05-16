@@ -35,6 +35,8 @@ from typing import Any, Optional
 import numpy as np
 import pandas as pd
 
+from pipeline.cluster_groups import label_to_group
+
 logger = logging.getLogger(__name__)
 
 
@@ -316,6 +318,7 @@ class ClusterProfile:
     item_label:    Optional[str] = None    # PREFIX4_LABEL 변환값
     region_label:  Optional[str] = None    # REGION_LABEL 변환값
     narrative:     Optional[str] = None    # 평어체 1줄 해설 (보고서 카드용)
+    group:         Optional[str] = None    # cluster_groups enum (label_to_group 산출)
 
 
 def _label_cluster(stats: dict[str, Any]) -> str:
@@ -514,6 +517,7 @@ def compute_profiles(
             region_label=label_region(rep_region),
         )
         profile.narrative = _narrative_for(profile)
+        profile.group = label_to_group(profile.label)
         profiles.append(profile)
 
     return sorted(profiles, key=lambda p: p.cluster_id)

@@ -15,6 +15,11 @@ from pathlib import Path
 
 import pandas as pd
 
+# 부모 디렉터리 import 가능하도록 path 추가 (uv run python scripts/...)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from pipeline.cluster_groups import label_to_group  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 ARTIFACTS = ROOT / "artifacts"
 ANALYSIS = ROOT / "analysis"
@@ -148,21 +153,26 @@ def render_scatter_svg(
 
 
 def _group_of(p: dict) -> str:
-    """라벨 → 그룹 매핑 (UI용)."""
+    """라벨 → 그룹 매핑 (UI용).
+
+    1순위: profiles.json 의 'group' 필드 (US-001 부터 채워짐)
+    2순위: pipeline.cluster_groups.label_to_group (label 기반 fallback)
+    3순위: UI 전용 키 (new_sr / high_lost) — legacy label 매칭
+    """
     cid = p["cluster_id"]
     if cid == -1:
         return "noise"
-    label = p["label"]
-    # SR 신뢰도: 진짜 SR(장애인·사회적) vs 여성CEO 자동판별 분리 — 운영 정책상 중요
-    if "진짜 SR" in label:
-        return "real_sr"
-    if "자동판별 SR" in label or "여성CEO" in label:
-        return "auto_sr"
-    if "베테랑" in label:
-        return "veteran"
-    if "활동저조" in label or "활동중단" in label:
-        return "dormant"
-    if "고탈락" in label:
+    # 1순위: profile.group 필드 (재학습 후 채워짐)
+    grp = p.get("group")
+    if grp:
+        return str(grp)
+    # 2순위: label_to_group (5 enum)
+    label = p.get("label") or ""
+    enum_grp = label_to_group(label)
+    if enum_grp:
+        return enum_grp
+    # 3순위: UI 전용 legacy 키 (high_lost / new_sr)
+    if "고탈락" in label or "탈락" in label:
         return "high_lost"
     if "신생 SR" in label:
         return "new_sr"
