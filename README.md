@@ -14,6 +14,24 @@
 
 ---
 
+## 📊 분석 결과 종합 보고서 — **`analysis/final_report.html`**
+
+워크플로우 · 점수 산출 · 데이터·ML 핵심 발견 · 운영 모델 · Phase 로드맵을 한 문서에 통합 (인쇄 친화).
+
+**열기:**
+
+```bash
+open analysis/final_report.html              # macOS — 기본 브라우저로
+# 또는
+python3 -m http.server 8080 -d analysis &    # http://localhost:8080/final_report.html
+```
+
+> GitHub 웹에서 직접 렌더되지 않으므로 clone 후 위 명령으로 열기. 또는 `analysis/final_report.html` 을 다운받아 더블클릭.
+
+이전 EDA·클러스터링·방법론 보고서는 [`analysis/archive/`](./analysis/archive/) 에 보존.
+
+---
+
 ## 빠른 시작
 
 ### 1. 환경 준비
@@ -80,15 +98,9 @@ psql -U postgres -d <db_name> -f sql/init.sql
 
 ## 진행 상황
 
-MVP 사전탐색 모드 v2 동작 중 (룰베이스 4축 가중합 + SR floor + KNN cold-start narrative).
+MVP 사전탐색 모드 v2 동작 중 (룰베이스 4축 가중합 + SR floor + KNN 신규 업체 설명).
 세부 작업 진행은 [`CLAUDE.md` § 10](./CLAUDE.md#10-진행-상황-2026-05-17) 참조.
-
-## 보고서
-
-| 산출물 | 위치 | 내용 |
-|---|---|---|
-| **종합 보고서** | [`analysis/final_report.html`](./analysis/final_report.html) | 워크플로우 · 점수 산출 · 데이터·ML 핵심 발견 · 운영 모델 · Phase 로드맵 |
-| Archival | [`analysis/archive/`](./analysis/archive/) | 이전 EDA·클러스터링·방법론 보고서 (보존) |
+종합 분석 결과는 위 [`analysis/final_report.html`](./analysis/final_report.html) 참조.
 
 ## 라이선스 / 데이터 출처
 

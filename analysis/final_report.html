@@ -331,15 +331,15 @@
 <!-- ============================================================ -->
 <h2 id="s1">1. 문제 정의와 시스템 범위</h2>
 
-<p>한국환경공단은 환경기초시설(소각·하수처리·바이오 등) 의 관급자재(펌프·송풍기·약품·계측기 등)를 조달하면서, 정부의 사회적 가치 정책에 따라 일정 비율 이상 SR(중소·여성·장애인·사회적기업 등)을 충족해야 한다. 같은 세부품명번호를 공급할 수 있는 사업자등록번호(BRN) 가 수십~수백 곳에 달해, 어떤 군집이 두텁고 신뢰할 만한지를 발주 담당자가 직관으로 판단하기 어려운 구조다.</p>
+<p>한국환경공단은 환경기초시설(소각·하수처리·바이오 등) 의 관급자재(펌프·송풍기·약품·계측기 등)를 조달하면서, 정부의 사회적 가치 정책에 따라 일정 비율 이상 SR(중소·여성·장애인·사회적기업 등)을 충족해야 한다. 같은 세부품명번호를 공급할 수 있는 사업자등록번호(BRN) 가 수십~수백 곳에 달해, 어떤 공급자 풀이 충분하고 신뢰 가능한지를 발주 담당자가 직관만으로 판단하기 어려운 구조다.</p>
 
-<p>본 시스템은 발주 담당자가 단시간 내에 후보 BRN을 비교하고 결정할 수 있도록 돕는 의사결정 지원 도구로 한정한다. 본 시스템은 자동 발주가 아닌 의사결정 보조 도구이며, 이 전제에 따라 운영 범위를 다음과 같이 제한한다.</p>
+<p>본 시스템은 발주 담당자가 단시간 내에 후보 BRN을 비교하고 결정할 수 있도록 돕는 의사결정 지원 도구로 정의한다. 자동 발주가 아닌 의사결정 보조 도구이며, 이 전제에 따라 운영 범위를 다음과 같이 제한한다.</p>
 
 <ul>
-  <li><b>예측이 아닌 후보 제시</b>: ML 모델이 "이 BRN이 낙찰자다"라고 단언하지 않는다. 사용자가 비교할 수 있는 top-K 후보와 근거를 제공한다.</li>
+  <li><b>예측이 아닌 후보 제시</b>: ML 모델이 "이 BRN이 낙찰자다"라고 단언하지 않는다. 사용자가 비교할 수 있는 상위 K개 후보와 근거를 제공한다.</li>
   <li><b>원점수 확률 비공개</b>: 보정(calibration) 이 보장되지 않은 ML 출력 확률을 사용자에게 노출하지 않는다. 등급(A/B/C) 또는 순위만 사용한다.</li>
-  <li><b>권한·책임 분리</b>: 사용자(공무원)에게 데이터 ingest 트리거 권한을 부여하지 않는다. 신선도 책임은 운영팀에게 있다.</li>
-  <li><b>정책 강제 vs 시장 신호 분리</b>: SR 의무비율은 점수 산출 룰이 강제하고, 시장 변수는 ML이 학습하도록 두 층을 분리한다(§8 참조).</li>
+  <li><b>권한·책임 분리</b>: 사용자에게 데이터 적재 실행 권한을 부여하지 않는다. 데이터 최신성 관리는 운영팀이 담당한다.</li>
+  <li><b>정책 요건과 시장 신호의 분리</b>: SR 의무비율은 점수 산출 규칙에 반영하고, 시장 변수는 ML 모델이 학습하도록 점수 산출 로직과 학습 모델의 역할을 분리한다(§8 참조).</li>
 </ul>
 
 <p>분석의 최소 단위(PK)는 <b>세부품명번호(10자리) × 사업자등록번호(BRN, 10자리)</b> 다. 모든 데이터셋이 이 두 키로 join된다.</p>
@@ -402,7 +402,7 @@
 <!-- ============================================================ -->
 <h2 id="s2">2. 사전탐색 모드 워크플로우</h2>
 
-<p>사전탐색 모드는 공고가 발주되기 <em>전</em> 시점에 동작한다. 담당자가 품목 키워드, 정책 필터, 예산을 입력하면 후보 BRN top-K를 반환한다.</p>
+<p>사전탐색 모드는 공고가 발주되기 <em>전</em> 시점에 동작한다. 담당자가 품목 키워드, 정책 필터, 예산을 입력하면 상위 K개 후보 BRN을 반환한다.</p>
 
 <h3>2.1 4단계 파이프라인</h3>
 
@@ -416,7 +416,7 @@
   <div class="flow-box">
     <div class="stage">Stage 1</div>
     <div class="title">Retrieve</div>
-    <div class="sub">prefix4 매핑<br/>name_regex<br/>SR hard filter</div>
+    <div class="sub">prefix4 매핑<br/>name_regex<br/>SR 필수 필터</div>
   </div>
   <div class="flow-arrow">→</div>
   <div class="flow-box">
@@ -427,7 +427,7 @@
   <div class="flow-arrow">→</div>
   <div class="flow-box">
     <div class="stage">출력</div>
-    <div class="title">Enrich + Top-K</div>
+    <div class="title">부가 정보 + 상위 K</div>
     <div class="sub">리스크·전례<br/>KNN 설명 문구<br/>카드 조립</div>
   </div>
 </div>
@@ -442,17 +442,17 @@
     <tr>
       <td><b>Retrieve</b></td>
       <td>키워드 1개(8종 중) + 예산 + SR 필터</td>
-      <td>키워드 → prefix4 코드 집합 + 이름 정규식 매핑(<code>pipeline/item_keywords.py</code>). 예: "하수처리용 펌프" → <code>prefix4 [4015]</code> + 펌프 이름 정규식. SR 필터는 hard filter (해당 인증 없으면 풀에서 제외). 환경공단 활동 BRN만 잔류.</td>
-      <td>후보 BRN dict 리스트 (n = 수십~수백)</td>
+      <td>키워드 → prefix4 코드 집합 + 이름 정규식 매핑(<code>pipeline/item_keywords.py</code>). 예: "하수처리용 펌프" → <code>prefix4 [4015]</code> + 펌프 이름 정규식. SR 필터는 필수 필터 (해당 인증 없으면 풀에서 제외). 환경공단 활동 BRN만 잔류.</td>
+      <td>후보 BRN 목록 (n = 수십~수백)</td>
     </tr>
     <tr>
       <td><b>Rank</b></td>
       <td>Stage 1 후보 풀</td>
       <td><code>RuleRanker</code>가 4축(SR 다양성 0.35 / 실적 0.30 / 가격 0.20 / 공급 0.15)을 산출해 가중합. 풀에 SR 보유자 3명 이상이면 sr_count=0 BRN을 −1.0 demote.</td>
-      <td>점수가 포함된 후보 리스트, sort key=<code>rule_score</code></td>
+      <td>점수가 포함된 후보 리스트, 정렬 기준=<code>rule_score</code></td>
     </tr>
     <tr>
-      <td><b>Enrich</b></td>
+      <td><b>부가 정보 결합</b></td>
       <td>상위 K(기본 5~10) BRN</td>
       <td>각 BRN에 대해 SQL 조회: 최근 낙찰 이력, 1순위 탈락 횟수, 유사 발주 사례, K-NN 유사 BRN(cold-start 보강)</td>
       <td><code>RecommendationV2Item</code> 카드 K개</td>
@@ -569,7 +569,7 @@
   </tbody>
 </table>
 
-<h3>3.2 추천 카드 (top-K)</h3>
+<h3>3.2 추천 카드 (상위 K)</h3>
 
 <table>
   <thead>
@@ -595,15 +595,15 @@
   <tbody>
     <tr>
       <td>예상가격</td>
-      <td>룰베이스 산식이 "예산 × 평균 낙찰률" 구조라 예산을 늘리면 예상가도 비례 증가하는 문제. 시장가격 정보 0. 회귀 모델(LGBM Regressor) 도입 전까지 표시 안 함(§10).</td>
+      <td>룰베이스 산식이 "예산 × 평균 낙찰률" 구조라 예산을 늘리면 예상가도 비례 증가하는 문제. 시장가격 정보가 반영되지 않는다. 회귀 모델(LGBM Regressor) 도입 전까지 표시하지 않음(§10).</td>
     </tr>
     <tr>
       <td>클러스터 라벨</td>
-      <td>운영 의사결정에 의미 미미(§6). 군집 ID가 재학습마다 흔들리는 안정성 문제도 있음.</td>
+      <td>운영 의사결정 기여도가 낮음(§6). 군집 ID가 재학습마다 흔들리는 안정성 문제도 있음.</td>
     </tr>
     <tr>
       <td>raw ML probability</td>
-      <td>Classifier는 scale_pos_weight=154로 prior 부풀려짐, Ranker는 lambdarank 절대 단위 없음. calibration 부재(§8.5).</td>
+      <td>Classifier는 scale_pos_weight=154 적용으로 출력 확률이 실제 확률보다 높게 산출될 수 있으며, Ranker는 lambdarank 절대 단위 없음. 보정(calibration) 부재(§8.5).</td>
     </tr>
     <tr>
       <td>후보 분산도 (entropy)</td>
@@ -782,7 +782,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
     </tr>
     <tr>
       <td><b>SR 가중 0.35</b></td>
-      <td>"SR 1순위" 라는 합의에서 가장 큰 가중. 0.40 이상이면 시장 신호를 너무 죽이고, 0.30 이하면 SR 보유자/미보유자 정렬이 다른 축에 의해 뒤집힐 수 있음.</td>
+      <td>"SR 1순위" 라는 합의에서 가장 큰 가중. 0.40 이상이면 시장 변수의 영향이 과도하게 약화되고, 0.30 이하면 SR 보유자/미보유자 정렬이 다른 축에 의해 뒤집힐 수 있음.</td>
     </tr>
     <tr>
       <td><b>SR 이진화</b></td>
@@ -794,7 +794,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
     </tr>
     <tr>
       <td><b>SR floor 발동 조건 "3명 이상"</b></td>
-      <td>풀에 SR 보유자가 1~2명인 경우는 풀 자체가 얕아서 SR 미보유 BRN을 demote하면 추천 카드 자체가 부족해진다. 3명을 기준으로 잡으면 K=3~5 추천에서 SR 보유자만으로 채울 수 있다.</td>
+      <td>풀에 SR 보유자가 1~2명인 경우는 풀 자체가 얕아서 SR 미보유 BRN을 demote하면 추천 카드 수가 부족해질 수 있다. 3명을 기준으로 잡으면 K=3~5 추천에서 SR 보유자만으로 채울 수 있다.</td>
     </tr>
   </tbody>
 </table>
@@ -808,8 +808,8 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
 <ul>
   <li>운영 피드백 라벨(좋은 추천 / 나쁜 추천) 이 수집되지 않아 가중치 학습은 불가능하다.</li>
   <li>A/B 테스트는 수행되지 않았다.</li>
-  <li>"왜 0.35인가" 에 대한 답은 없다. 답할 수 있는 것은 순서뿐이다.</li>
-  <li>운영 단계 진입 후 사용자 클릭/선택 로그를 수집하면 메타-ranker(가중치 학습)로 진화 가능(§10).</li>
+  <li>0.35라는 값 자체에 대한 통계적 근거는 없으며, 현재 설명 가능한 근거는 가중치의 상대적 우선순위다.</li>
+  <li>운영 단계 진입 후 사용자 클릭/선택 로그를 수집하면 메타-ranker(가중치 학습)로 확장할 수 있다(§10).</li>
 </ul>
 
 <!-- ============================================================ -->
@@ -835,11 +835,11 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
   </tbody>
 </table>
 
-<p>정량 지표만 보면 양호하다 — <b>Silhouette 0.5</b> (1에 가까울수록 군집 분리 명확) 와 <b>Davies-Bouldin 0.66</b> (0에 가까울수록 군집 간 분리 양호) 모두 일반 임계 통과. 그러나 운영 측면에서는 무의미했다.</p>
+<p>정량 지표만 보면 양호하다 — <b>Silhouette 0.5</b> (1에 가까울수록 군집 분리 명확) 와 <b>Davies-Bouldin 0.66</b> (0에 가까울수록 군집 간 분리 양호) 모두 일반 임계 통과. 그러나 운영 적용 가치는 제한적이었다.</p>
 
 <h3>6.2 결과 ≠ 통찰 — 군집이 도메인 분류의 재확인이었음</h3>
 
-<p>12군집 라벨을 사후 분석한 결과 (prefix4 × 휴면 여부 × SR 진위) 의 카르테시안 곱과 거의 일치했다.</p>
+<p>12군집 라벨을 사후 분석한 결과 (prefix4 × 휴면 여부 × SR 진위) 의 조합 구조과 거의 일치했다.</p>
 
 <table>
   <thead>
@@ -873,9 +873,9 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
 <h3>6.3 운영에 도움이 안 된 세 가지 사유</h3>
 
 <ol>
-  <li><b>의사결정 단위와 군집 단위의 불일치</b> — 추천은 "1 발주 × N 후보" 단위로 일어나는데, 군집은 전체 풀을 한 번 자른 정적 라벨이다. Stage 1 keyword retrieve로 풀이 좁아진 시점에서 군집 정보는 거의 노이즈가 된다.</li>
-  <li><b>이미 도메인 코드로 가능한 분류</b> — prefix4 + dormant_months + real_sr_flag 세 컬럼이면 군집 라벨과 거의 같은 정보가 나온다. 별도 군집 enum을 두면 한국어 라벨에 의존한 분기(Hyrum's Law) 위험까지 추가된다. 라벨 문구 한 글자만 바뀌어도 분기가 조용히 깨질 수 있다.</li>
-  <li><b>데이터 규모 한계</b> — 활성 BRN 1,694명, 학습 positive 449건은 UMAP+HDBSCAN의 안정성을 보장하기에 빈약할 수 있다. 재학습마다 군집 ID가 흔들릴 위험이 있으며 (안정성 정량 검증 미수행), 운영 일관성 보장이 어려우므로 보수적으로 운영 경로에서 제외한다. 사용자에게 "이번 주의 cluster 1" 과 "지난주의 cluster 1" 의 의미를 일관되게 설명할 수 없는 상황을 피한다.</li>
+  <li><b>의사결정 단위와 군집 단위의 불일치</b> — 추천은 "1 발주 × N 후보" 단위로 일어나는데, 군집은 전체 풀을 한 번 자른 정적 라벨이다. Stage 1 keyword retrieve로 풀이 좁아진 시점에서 군집 정보의 의사결정 기여도가 낮아진다.</li>
+  <li><b>이미 도메인 코드로 가능한 분류</b> — prefix4 + dormant_months + real_sr_flag 세 컬럼이면 군집 라벨과 거의 같은 정보가 나온다. 별도 군집 enum을 두면 한국어 라벨에 의존한 분기(Hyrum's Law) 위험까지 추가된다. 라벨 문구가 변경되면 의도하지 않은 분기 오류가 발생할 수 있다.</li>
+  <li><b>데이터 규모 한계</b> — 활성 BRN 1,694명, 학습 positive 449건은 UMAP+HDBSCAN의 안정성을 보장하기에 충분하지 않을 수 있다. 재학습마다 군집 ID가 흔들릴 위험이 있으며 (안정성 정량 검증 미수행), 운영 일관성 보장이 어려우므로 보수적으로 운영 경로에서 제외한다. 사용자에게 "이번 주의 cluster 1" 과 "지난주의 cluster 1" 의 의미를 일관되게 설명할 수 없는 상황을 피한다.</li>
 </ol>
 
 <p>결과적으로 운영 카드 표층에서 cluster_label을 제거했고, 가중치 보정에서도 클러스터 신호를 제거했다. 코드 자산(<code>pipeline/clustering.py</code>, <code>artifacts/clustering_*</code>) 은 archival 목적으로 보존하되 운영 경로에서는 분리한다.</p>
@@ -908,7 +908,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
     <br/>
     <b>판별 방법</b>: 외부 인증 기관 발급 인증서<br/>
     <b>외부 검증</b>: 있음 (공공구매 인증서 API로 추가 검증 가능)<br/>
-    <b>의미</b>: 정책 의무 충족의 진짜 근거
+    <b>의미</b>: 정책 의무 충족의 실질 근거
   </div>
 </div>
 
@@ -933,7 +933,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
 </table>
 
 <div class="callout bad">
-  <b>핵심 발견:</b> 환경공단 활동 BRN 1,318명 중 "SR 보유" 카드가 327개 떠도, 그중 80%(260개) 는 자동판별 여성 CEO 단독이다. 외부 인증서 보유 풀은 67명(5.1%) 에 불과하다. 정책 의무비율 보고에 자동판별 단독을 포함하면 실질 충족도가 과대평가된다.
+  <b>핵심 발견:</b> 환경공단 활동 BRN 1,318명 중 "SR 보유" 가 327개로 표시되더라도, 그중 80%(260개) 는 자동판별 여성 CEO 단독이다. 외부 인증서 보유 풀은 67명(5.1%) 에 불과하다. 정책 의무비율 보고에 자동판별 단독을 포함하면 실질 충족도가 과대평가된다.
 </div>
 
 <h4>7.1.3 플래그별 분포</h4>
@@ -947,7 +947,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
   </tbody>
 </table>
 
-<p>자동판별 여성 CEO 플래그가 외부 인증 두 플래그 합계의 약 6배. "any SR" 카운트의 88%가 female_ceo_flag 한 항목으로 부풀려진다.</p>
+<p>자동판별 여성 CEO 플래그가 외부 인증 두 플래그 합계의 약 6배. "any SR" 카운트의 88%가 female_ceo_flag 한 항목으로 과대 산정된다.</p>
 
 <h3>7.2 후보 풀 규모와 단독공급 비중</h3>
 
@@ -974,7 +974,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
 
 <p>mean supplier 4.47 / median 2. 품목 절반이 단독공급이다. KPI "계약방식 권장" 임계(1 / 2~5 / 6+) 는 이 분포와 부합한다. 단, 단독공급 비율 48%로 높아 "단독공급 — 가격경쟁 어려움" 경고가 운영상 자주 노출될 것으로 예상된다.</p>
 
-<p>유찰 비율 12.5% (env-corp 2,218건 기준) — 후보 0건 엣지 케이스의 상한 근사.<br/>
+<p>유찰 비율 12.5% (env-corp 2,218건 기준) — 후보 0건 예외 사례의 상한 근사.<br/>
 <small style="color:#6b7280">※ "입찰 참여자수 median 4명" 수치는 출처 검증 미완료. <code>stg_opening_result</code> 참여자 컬럼 기반 SQL 검증을 후속 EDA(§10.1)로 분리.</small></p>
 
 <h3>7.3 발주 빈도와 추세</h3>
@@ -986,7 +986,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
     <span class="bar-value">575건</span>
   </div>
   <div class="bar-row">
-    <span class="bar-label">2022 ← peak</span>
+    <span class="bar-label">2022 ← 최고치</span>
     <div class="bar-track"><div class="bar" style="width: 100%;"></div></div>
     <span class="bar-value">663건</span>
   </div>
@@ -1014,7 +1014,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
 
 <ul>
   <li>4개년 평균 545.75건/년 ≈ <b>일 1.50건</b></li>
-  <li>CLAUDE.md §10의 "연 612건" 은 2022 peak 기준</li>
+  <li>CLAUDE.md §10의 "연 612건" 은 2022 최고치 기준</li>
   <li>2022 → 2025 누적 <b>−29.7%</b> (연 약 −10% 감소)</li>
   <li>운영 시스템 효용 측정 KPI(월간 추천 건수, 채택률) 설계 시 발주 감소 영향 분리 필요</li>
 </ul>
@@ -1091,7 +1091,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
   <li>참조 BRN 환경공단 발주 ≥ 3회</li>
 </ul>
 
-<p>장애인기업 cold-start 보강 효과는 제한적(전체의 4.2%) 이며, KNN은 핵심 의사결정 요소가 아니라 보조 설명 문구로만 위치한다.</p>
+<p>장애인기업 cold-start 보강 효과는 제한적(전체의 4.2%) 이며, KNN은 핵심 의사결정 요소가 아니라 신규·저이력 업체 보완 설명으로만 위치한다.</p>
 
 <h3>7.8 기타 데이터 품질 신호</h3>
 
@@ -1236,7 +1236,7 @@ final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
 
 <h4>8.5.3 원점수 확률(raw probability) 노출 금지</h4>
 
-<p>Classifier scale_pos_weight=154 → 출력 sigmoid 값의 prior가 인위적으로 부풀려짐. "BRN 낙찰 확률 = 0.87" 같은 해석 성립 X.<br/>
+<p>Classifier scale_pos_weight=154 → 출력 sigmoid 값의 사전 확률이 가중치에 의해 왜곡될 수 있다. "BRN 낙찰 확률 = 0.87" 같은 해석은 성립하지 않는다.<br/>
 Ranker lambdarank score → 절대 단위 정의 없음. 순위 점수일 뿐.</p>
 
 <p>따라서 두 모델 모두 등급(A/B/C) 또는 순위로만 제시 (CLAUDE.md §9 와 일관).</p>
@@ -1250,9 +1250,9 @@ Ranker lambdarank score → 절대 단위 정의 없음. 순위 점수일 뿐.</
   <thead><tr><th>레이어</th><th>주기</th><th>스케줄</th></tr></thead>
   <tbody>
     <tr><td>Raw 적재 (G2B API 4종)</td><td>주 1회</td><td>월요일 03:00 KST</td></tr>
-    <tr><td>stg_* (정규화 staging)</td><td>주 1회</td><td>Raw 직후, full rebuild from raw</td></tr>
-    <tr><td>mart_company_master / mart_company_sr</td><td>분기 1회 + 신규 BRN 매주</td><td>CSV 갱신 시 + incremental upsert</td></tr>
-    <tr><td>mart_item_supply</td><td>주 1회</td><td>full rebuild</td></tr>
+    <tr><td>stg_* (정규화 staging)</td><td>주 1회</td><td>Raw 직후, 전체 재구축 from raw</td></tr>
+    <tr><td>mart_company_master / mart_company_sr</td><td>분기 1회 + 신규 BRN 매주</td><td>CSV 갱신 시 + 증분 반영</td></tr>
+    <tr><td>mart_item_supply</td><td>주 1회</td><td>전체 재구축</td></tr>
     <tr><td>mart_features_at_bid (PIT 피처)</td><td>월 1회</td><td>LGBM 학습 직전. 룰베이스 운영엔 불필요</td></tr>
     <tr><td>LGBM 학습</td><td>월 1회 또는 데이터 +20% 시</td><td>수동 — <code>scripts/train_*.py</code></td></tr>
     <tr><td>룰베이스 가중치 검토</td><td>분기 1회</td><td>수동, 운영팀 회의 결정</td></tr>
@@ -1319,7 +1319,7 @@ Ranker lambdarank score → 절대 단위 정의 없음. 순위 점수일 뿐.</
     <ul>
       <li>운영자 macOS에서 launchd</li>
       <li>로컬 PostgreSQL</li>
-      <li>운영자 PC 꺼지면 멈춤 (시범만 OK)</li>
+      <li>운영자 PC 꺼지면 멈춤 (시범 운영에 한정 가능)</li>
     </ul>
   </div>
   <div class="phase-box">
