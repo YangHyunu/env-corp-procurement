@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>한국환경공단 SR 공급망 의사결정 지원 — 종합 보고서</title>
+<style>
+  :root {
+    --fg: #0f172a;
+    --muted: #475569;
+    --line: #cbd5e1;
+    --bg-alt: #f8fafc;
+    --accent: #1e3a8a;
+    --accent2: #4f46e5;
+    --warn-bg: #fef3c7;
+    --warn-bd: #d97706;
+    --warn-fg: #78350f;
+    --good: #166534;
+    --good-bg: #dcfce7;
+    --bad: #991b1b;
+    --bad-bg: #fee2e2;
+    --neutral: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+    color: var(--fg);
+    line-height: 1.65;
+    background: #fff;
+  }
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 44px 32px 64px;
+  }
+  h1 {
+    font-size: 25px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    border-bottom: 2px solid var(--fg);
+    padding-bottom: 12px;
+    margin: 0 0 6px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 28px;
+  }
+  h2 {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 42px 0 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  h3 {
+    font-size: 14.5px;
+    font-weight: 700;
+    margin: 24px 0 8px;
+    color: var(--accent);
+  }
+  h4 {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin: 16px 0 6px;
+    color: var(--fg);
+  }
+  p { margin: 0 0 12px; font-size: 13.5px; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; font-size: 13.5px; }
+  li { margin-bottom: 5px; }
+  code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 12.5px;
+    background: var(--bg-alt);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #be185d;
+  }
+  pre {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 12px;
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    line-height: 1.55;
+    margin: 0 0 16px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 20px;
+    font-size: 12.5px;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--bg-alt);
+    font-weight: 700;
+    font-size: 12px;
+  }
+  td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, monospace;
+  }
+  .good  { color: var(--good); font-weight: 700; }
+  .bad   { color: var(--bad);  font-weight: 700; }
+  .zero  { color: var(--neutral); font-weight: 700; }
+
+  .callout {
+    background: var(--warn-bg);
+    border-left: 4px solid var(--warn-bd);
+    color: var(--warn-fg);
+    padding: 12px 16px;
+    margin: 14px 0 18px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    border-radius: 0 4px 4px 0;
+  }
+  .callout b { color: var(--warn-fg); }
+
+  .callout.info {
+    background: #eff6ff;
+    border-left-color: #1e3a8a;
+    color: #1e3a8a;
+  }
+  .callout.info b { color: #1e3a8a; }
+
+  .callout.good {
+    background: var(--good-bg);
+    border-left-color: var(--good);
+    color: var(--good);
+  }
+  .callout.good b { color: var(--good); }
+
+  .callout.bad {
+    background: var(--bad-bg);
+    border-left-color: var(--bad);
+    color: var(--bad);
+  }
+  .callout.bad b { color: var(--bad); }
+
+  /* 파이프라인 다이어그램 */
+  .flow {
+    display: grid;
+    grid-template-columns: 1fr 24px 1fr 24px 1fr 24px 1fr;
+    gap: 0;
+    align-items: stretch;
+    margin: 16px 0 24px;
+  }
+  .flow-box {
+    border: 1.5px solid var(--fg);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+    background: #fff;
+  }
+  .flow-box .stage {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .flow-box .title {
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .flow-box .sub {
+    font-size: 10.5px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--muted);
+  }
+
+  /* 막대 차트 */
+  .bar-chart {
+    margin: 8px 0 18px;
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 60px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+  .bar-row .bar-label {
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .bar-row .bar-track {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+    height: 18px;
+    position: relative;
+  }
+  .bar-row .bar {
+    background: var(--accent);
+    height: 100%;
+    border-radius: 0;
+  }
+  .bar-row .bar.alt { background: var(--accent2); }
+  .bar-row .bar.muted { background: var(--neutral); }
+  .bar-row .bar-value {
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--fg);
+    text-align: right;
+  }
+
+  /* 사이드별 비교 박스 */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 10px 0 18px;
+  }
+  .compare-box {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-size: 12.5px;
+    background: var(--bg-alt);
+  }
+  .compare-box .h {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+    margin-bottom: 6px;
+  }
+
+  /* 타임라인 (Phase 로드맵) */
+  .phase-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin: 12px 0 20px;
+  }
+  .phase-box {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-size: 12px;
+  }
+  .phase-box .phase-h {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--accent);
+  }
+  .phase-box .phase-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .phase-box ul { padding-left: 16px; margin-bottom: 0; font-size: 11.5px; }
+
+  .toc {
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin: 0 0 28px;
+    font-size: 13px;
+  }
+  .toc ol { margin: 4px 0 0; padding-left: 22px; }
+  .toc li { margin-bottom: 2px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .footnote {
+    color: var(--muted);
+    font-size: 11.5px;
+    margin-top: 32px;
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+
+  @media print {
+    main { padding: 22px; max-width: none; }
+    h2 { page-break-after: avoid; }
+    table, pre, .flow, .callout, .bar-chart, .phase-grid, .compare-grid { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>한국환경공단 SR 공급망 의사결정 지원 — 종합 보고서</h1>
+<div class="subtitle">사전탐색 모드 운영 사양 · 점수 산출 · 데이터·ML 핵심 발견 · 운영 데이터 모델 · 2026-05-16 기준</div>
+
+<div class="toc">
+  <b>목차</b>
+  <ol>
+    <li><a href="#s1">문제 정의와 시스템 범위</a></li>
+    <li><a href="#s2">사전탐색 모드 워크플로우 + 예시</a></li>
+    <li><a href="#s3">프론트에서 제공하는 데이터 — KPI · 추천 카드</a></li>
+    <li><a href="#s4">점수 산출 — 룰베이스 4축 + 산출 예시</a></li>
+    <li><a href="#s5">가중치·보정 값의 근거</a></li>
+    <li><a href="#s6">클러스터링의 운영 적용 한계</a></li>
+    <li><a href="#s7">데이터 핵심 발견 (DA)</a></li>
+    <li><a href="#s8">ML 학습 결과 (DS) — 시장 변수 vs 정책 의무 변수</a></li>
+    <li><a href="#s9">데이터 운영 모델 — 갱신 · 권한 · 표기</a></li>
+    <li><a href="#s10">한계와 Phase 로드맵</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s1">1. 문제 정의와 시스템 범위</h2>
+
+<p>한국환경공단은 환경기초시설(소각·하수처리·바이오 등) 의 관급자재(펌프·송풍기·약품·계측기 등)를 조달하면서, 정부의 사회적 가치 정책에 따라 일정 비율 이상 SR(중소·여성·장애인·사회적기업 등)을 충족해야 한다. 같은 세부품명번호를 공급할 수 있는 사업자등록번호(BRN) 가 수십~수백 곳에 달해, 어떤 군집이 두텁고 신뢰할 만한지를 발주 담당자가 직관으로 판단하기 어려운 구조다.</p>
+
+<p>본 시스템은 발주 담당자가 단시간 내에 후보 BRN을 비교하고 결정할 수 있도록 돕는 의사결정 지원 도구로 한정한다. 본 시스템은 자동 발주가 아닌 의사결정 보조 도구이며, 이 전제에 따라 운영 범위를 다음과 같이 제한한다.</p>
+
+<ul>
+  <li><b>예측이 아닌 후보 제시</b>: ML 모델이 "이 BRN이 낙찰자다"라고 단언하지 않는다. 사용자가 비교할 수 있는 top-K 후보와 근거를 제공한다.</li>
+  <li><b>원점수 확률 비공개</b>: 보정(calibration) 이 보장되지 않은 ML 출력 확률을 사용자에게 노출하지 않는다. 등급(A/B/C) 또는 순위만 사용한다.</li>
+  <li><b>권한·책임 분리</b>: 사용자(공무원)에게 데이터 ingest 트리거 권한을 부여하지 않는다. 신선도 책임은 운영팀에게 있다.</li>
+  <li><b>정책 강제 vs 시장 신호 분리</b>: SR 의무비율은 점수 산출 룰이 강제하고, 시장 변수는 ML이 학습하도록 두 층을 분리한다(§8 참조).</li>
+</ul>
+
+<p>분석의 최소 단위(PK)는 <b>세부품명번호(10자리) × 사업자등록번호(BRN, 10자리)</b> 다. 모든 데이터셋이 이 두 키로 join된다.</p>
+
+<h3>1.1 본 보고서의 핵심 용어</h3>
+
+<h4>도메인 용어</h4>
+<table>
+  <thead>
+    <tr><th style="width:26%">용어</th><th>정의</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><b>BRN</b> (사업자등록번호)</td><td>10자리 정수 문자열 (예 <code>1408121883</code>). 국외 업체는 <code>F</code> + 9자리. 모든 데이터셋의 통합 join key. 정규화 시 하이픈·공백 제거.</td></tr>
+    <tr><td><b>prefix4</b></td><td>세부품명번호(10자리) 의 앞 4자리 = 품목 카테고리 코드 (예 4015 펌프, 4111 계측, 4710 약품·활성탄).</td></tr>
+    <tr><td><b>dminstt</b> (수요기관 코드)</td><td>발주 기관 식별자. 환경공단은 본사 1 + 권역본부 8 + 사업단 1 = 10개.</td></tr>
+    <tr><td><b>SR</b> (Social Responsibility)</td><td>사회적 가치 실현 의무 카테고리 — 중소·여성·장애인·사회적기업·자활용사촌·창업기업.</td></tr>
+    <tr><td><code>sr_count</code></td><td>BRN 의 SR 인증 보유 수 (0~3). 사회적기업 + 여성기업 + 장애인기업 중 보유 개수.</td></tr>
+    <tr><td><code>any_sr</code> / "SR 보유"</td><td><code>sr_count ≥ 1</code>. 자동판별(여성기업) 포함.</td></tr>
+    <tr><td><code>real_sr</code> / "외부 인증"</td><td><code>disabled_corp_flag OR social_corp_flag</code>. 외부 인증서 기반만. <code>female_ceo_flag</code> (자동판별) 제외.</td></tr>
+    <tr><td><b>winner / 낙찰자</b></td><td>한 공고에서 낙찰받은 BRN. 본문은 "낙찰자", 표·코드 인용은 winner.</td></tr>
+  </tbody>
+</table>
+
+<h4>ML 용어</h4>
+<table>
+  <thead>
+    <tr><th style="width:26%">용어</th><th>정의</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><b>PIT</b> (point-in-time)</td><td>시점 피처 — 학습 시점 이전 누적값만 사용해 미래 정보 누설을 차단. 컬럼명 suffix <code>_pit</code>.</td></tr>
+    <tr><td><b>pointwise</b> (Classifier)</td><td>각 (공고, BRN) 쌍을 독립적으로 0/1 확률 예측. 공고 그룹 정보 무시.</td></tr>
+    <tr><td><b>listwise / lambdarank</b> (Ranker)</td><td>같은 공고에 묶인 후보들을 한 그룹으로 보고 그룹 내 순위만 학습. 추천 task 본연의 형식과 일치.</td></tr>
+    <tr><td><b>HR@5</b> (Hit Rate at 5)</td><td>상위 5개 추천 안에 정답(낙찰자) 이 포함될 확률. 운영 의사결정자가 보는 핵심 지표.</td></tr>
+    <tr><td><b>NDCG@5</b> (Normalized DCG)</td><td>정답 위치에 가중치를 둔 순위 품질 지표 (0~1, 1이 완벽). 정답이 상위일수록 점수 높음.</td></tr>
+    <tr><td><b>SR Cov@5</b></td><td>상위 5개 추천 중 SR 인증 보유 BRN 비율. 정책 의무비율 달성 신호.</td></tr>
+    <tr><td><b>AUC</b> (Area Under ROC Curve)</td><td>이진 분류기의 글로벌 분리 능력 (0.5 무작위, 1 완벽). 운영 순위 품질과는 별개.</td></tr>
+    <tr><td><b>scale_pos_weight</b></td><td>양성/음성 불균형 보정 가중치. 본 학습 데이터는 낙찰 1 : 미낙찰 154 비율 → 154 적용.</td></tr>
+    <tr><td><b>calibration</b> (보정)</td><td>모델 출력 확률이 실제 사건 확률과 일치하도록 후처리하는 절차. 미수행 시 0.83 같은 수치는 의미 해석 불가.</td></tr>
+    <tr><td><b>cold-start</b></td><td>낙찰 이력이 없거나 적은 신규 BRN. 학습 데이터에 없어 모델 예측 불가 → 룰베이스 또는 K-NN 으로 보강.</td></tr>
+    <tr><td><b>Silhouette / Davies-Bouldin</b></td><td>군집화 품질 정량 지표. Silhouette 1에 가까울수록 군집 분리 명확, Davies-Bouldin 0에 가까울수록 군집 간 분리 양호.</td></tr>
+    <tr><td><b>Hyrum's Law</b></td><td>"관측 가능한 모든 동작에 의존자가 생긴다" 는 경험칙. 한국어 라벨에 분기를 둘 경우 라벨 변경이 동작 변경이 됨.</td></tr>
+  </tbody>
+</table>
+
+<h4>운영·통계 용어</h4>
+<table>
+  <thead>
+    <tr><th style="width:26%">용어</th><th>정의</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><b>top-K</b></td><td>점수 정렬 상위 K건 (본 시스템 기본 K=5). 사용자가 보는 카드 수.</td></tr>
+    <tr><td><b>Q25 / Q50 / Q75</b></td><td>분포의 하위 25% / 50%(중앙값) / 75% 분위값. 평균 대신 outlier 영향을 줄인 대표값.</td></tr>
+    <tr><td><b>right-skew</b></td><td>오른쪽으로 긴 꼬리 분포 — 대다수가 낮은 값에 몰리고 소수가 매우 큰 값을 가짐. 평균이 중앙값보다 크게 위쪽으로 끌림.</td></tr>
+    <tr><td><b>outlier</b> (이상치)</td><td>분포 본체에서 크게 벗어난 극단값. 대형 시설 공사처럼 평균을 왜곡함.</td></tr>
+    <tr><td><b>floor demote</b></td><td>최소 비율 강제를 위한 감점 보정. SR 보유자 풀에 충분히 있을 때 sr_count=0 BRN의 점수를 −1.0 감산해 후순위로 밀어냄.</td></tr>
+    <tr><td><b>tier</b> (등급)</td><td>점수 분포 분위로 분류한 A (우선 추천) / B (추천) / C (검토) 등급. raw 점수는 보조로만 표시.</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s2">2. 사전탐색 모드 워크플로우</h2>
+
+<p>사전탐색 모드는 공고가 발주되기 <em>전</em> 시점에 동작한다. 담당자가 품목 키워드, 정책 필터, 예산을 입력하면 후보 BRN top-K를 반환한다.</p>
+
+<h3>2.1 4단계 파이프라인</h3>
+
+<div class="flow">
+  <div class="flow-box">
+    <div class="stage">입력</div>
+    <div class="title">사용자 요청</div>
+    <div class="sub">키워드 8종<br/>SR 필터 0~3<br/>예산(백만원)</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box">
+    <div class="stage">Stage 1</div>
+    <div class="title">Retrieve</div>
+    <div class="sub">prefix4 매핑<br/>name_regex<br/>SR hard filter</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box">
+    <div class="stage">Stage 2</div>
+    <div class="title">Rank</div>
+    <div class="sub">RuleRanker<br/>4축 가중합<br/>+ SR floor</div>
+  </div>
+  <div class="flow-arrow">→</div>
+  <div class="flow-box">
+    <div class="stage">출력</div>
+    <div class="title">Enrich + Top-K</div>
+    <div class="sub">리스크·전례<br/>KNN 설명 문구<br/>카드 조립</div>
+  </div>
+</div>
+
+<h3>2.2 단계 상세</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:14%">단계</th><th>입력</th><th>처리</th><th>출력</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Retrieve</b></td>
+      <td>키워드 1개(8종 중) + 예산 + SR 필터</td>
+      <td>키워드 → prefix4 코드 집합 + 이름 정규식 매핑(<code>pipeline/item_keywords.py</code>). 예: "하수처리용 펌프" → <code>prefix4 [4015]</code> + 펌프 이름 정규식. SR 필터는 hard filter (해당 인증 없으면 풀에서 제외). 환경공단 활동 BRN만 잔류.</td>
+      <td>후보 BRN dict 리스트 (n = 수십~수백)</td>
+    </tr>
+    <tr>
+      <td><b>Rank</b></td>
+      <td>Stage 1 후보 풀</td>
+      <td><code>RuleRanker</code>가 4축(SR 다양성 0.35 / 실적 0.30 / 가격 0.20 / 공급 0.15)을 산출해 가중합. 풀에 SR 보유자 3명 이상이면 sr_count=0 BRN을 −1.0 demote.</td>
+      <td>점수가 포함된 후보 리스트, sort key=<code>rule_score</code></td>
+    </tr>
+    <tr>
+      <td><b>Enrich</b></td>
+      <td>상위 K(기본 5~10) BRN</td>
+      <td>각 BRN에 대해 SQL 조회: 최근 낙찰 이력, 1순위 탈락 횟수, 유사 발주 사례, K-NN 유사 BRN(cold-start 보강)</td>
+      <td><code>RecommendationV2Item</code> 카드 K개</td>
+    </tr>
+    <tr>
+      <td><b>KPI 산출</b></td>
+      <td>전체 풀 + 상위 K</td>
+      <td>풀 크기, 시장 깊이(전체 등록사 vs 환경공단 활동), SR 비율, 공급 위험도, 계약방식 권장(1/2~5/6+)</td>
+      <td><code>KpiV2</code> + <code>ComplianceInfo</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>2.3 예시 — 하수처리용 펌프, 예산 100M, SR 필터 없음</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:14%">단계</th><th>실측 결과</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>입력</b></td>
+      <td><code>item_keyword="하수처리용 펌프"</code>, <code>budget_million_won=100</code>, <code>sr_filter={}</code>, <code>top_k=3</code></td>
+    </tr>
+    <tr>
+      <td><b>키워드 매핑</b></td>
+      <td>prefix4 = [4015], name_regex = 펌프 관련 키워드 (수중펌프·고압펌프 등)</td>
+    </tr>
+    <tr>
+      <td><b>Retrieve 결과</b></td>
+      <td>후보 풀 <b>115 BRN</b> (prefix4=4015 ∩ 환경공단 1년 활동)</td>
+    </tr>
+    <tr>
+      <td><b>Rank 결과 (top 3)</b></td>
+      <td>
+        <pre>#1 더블유아이엠   score 0.837  Tier A   sr=1.0 supply=0.991 track=0.924 price=0.304
+#2 성광수중펌프    score 0.834  Tier A   sr=1.0 supply=0.957 track=0.699 price=0.652
+#3 서광부스타     score 0.824  Tier A   sr=1.0 supply=0.817 track=0.534 price=0.957</pre>
+        세 카드 모두 sr_diversity=1.0 (이진, SR 보유). 차이는 실적/공급/가격 축에서 갈림.
+      </td>
+    </tr>
+    <tr>
+      <td><b>KPI 산출</b></td>
+      <td>pool_size 115 / sr_pct ≈ 26% / 계약방식 권장 = "일반경쟁(6+)" / 데이터 기준일 2026-05-06 (10일 경과)</td>
+    </tr>
+    <tr>
+      <td><b>카드 추가 정보</b></td>
+      <td>각 카드에 환경공단 낙찰 N건 · 평균 낙찰률 · 최근 낙찰 연월 · K-NN 유사 사례(있을 시) 표기</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout info">
+  <b>사전탐색에 ML을 사용하지 않는 이유:</b> 학습된 LGBM은 (공고, BRN) 쌍 단위로 동작한다. 사전탐색은 공고 자체가 없는 시점이므로 공고 측 피처(<code>presmpt_prce</code>, <code>bid_dminstt_cd</code>, <code>bid_dtil_prdct_no</code> 등)를 구성할 수 없어 룰베이스 정렬을 적용한다. 공고가 게시된 후의 "공고-후 추천 모드" 가 별도 신설되면 LGBM 1:1 교체가 가능하다(§8.5 · §10 참조).
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s3">3. 프론트에서 제공하는 데이터</h2>
+
+<h3>3.1 KPI 영역 (헤더 카드)</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:18%">KPI</th>
+      <th>설명</th>
+      <th style="width:22%">실측 범위 (펌프 예시)</th>
+      <th style="width:22%">운영 시그널</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>후보 BRN 수<br/><code>pool_size</code></td>
+      <td>키워드+SR 필터 통과 후 환경공단 활동 BRN 수</td>
+      <td>115</td>
+      <td>얕음(0~5) / 보통(6~50) / 두꺼움(50+)</td>
+    </tr>
+    <tr>
+      <td>시장 깊이<br/><code>market_depth</code></td>
+      <td>전체 등록사 수 vs 환경공단 활동 BRN 수</td>
+      <td>registered 2,404 / env_active 115</td>
+      <td>등록 대비 활동률 ≪ 50% 면 진입장벽 높음</td>
+    </tr>
+    <tr>
+      <td>SR 보유 비율<br/><code>sr_pct</code></td>
+      <td>풀 중 sr_count ≥ 1 비율 (자동판별 포함)</td>
+      <td>약 26%</td>
+      <td>20% 미만이면 의무비율 위험</td>
+    </tr>
+    <tr>
+      <td><b>외부 인증 비율</b><br/><code>real_sr_pct</code></td>
+      <td>풀 중 disabled_corp_flag OR social_corp_flag 비율 (외부 인증서 보유만)</td>
+      <td>약 5~6%</td>
+      <td><b>real_sr_pct &lt; 5% 면 외부 인증 풀 빈약</b> — 정책 의무비율 보고에 자동판별 단독을 포함하면 과대평가 위험 (§7.1)</td>
+    </tr>
+    <tr>
+      <td>공급 위험도<br/><code>supply_risk</code></td>
+      <td>풀 크기 기반 정성 등급</td>
+      <td>low / medium / high</td>
+      <td>high → 단독공급 또는 풀 ≤ 3</td>
+    </tr>
+    <tr>
+      <td>계약방식 권장<br/><code>contract_recommend</code></td>
+      <td>풀 크기별 권장: 1 → 수의계약 / 2~5 → 제한경쟁 / 6+ → 일반경쟁</td>
+      <td>일반경쟁</td>
+      <td>임계는 §7.2 supplier 분포로 정당화</td>
+    </tr>
+    <tr>
+      <td>데이터 기준일<br/><code>/api/v2/meta</code></td>
+      <td>cutoff 일자 + 경과일 + 21일 stale 경고</td>
+      <td>2026-04-25, 21일 stale 경고 ON</td>
+      <td>운영팀에 갱신 요청 시그널</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>3.2 추천 카드 (top-K)</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:24%">항목</th><th>내용</th><th style="width:22%">출처</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>순위 #N</td><td>1부터 K까지</td><td><code>item.rank</code></td></tr>
+    <tr><td>등급 Tier</td><td>A(우선 추천) / B(추천) / C(검토). 점수 분포 기반</td><td><code>item.tier</code></td></tr>
+    <tr><td>업체명 + BRN</td><td>corp_name + 10자리 사업자등록번호</td><td><code>corp_name</code>, <code>brn</code></td></tr>
+    <tr><td>SR 뱃지</td><td>여성기업 / 장애인기업 / 사회적기업 (보유 시 표기)</td><td><code>badges</code></td></tr>
+    <tr><td>요약 통계</td><td>환경공단 낙찰 N건 · 평균 낙찰률 % · 탈락 N · 최근 낙찰 연월</td><td><code>summary_stats</code></td></tr>
+    <tr><td>K-NN 유사 사례</td><td>"OOO 와 N% 유사" (cold-start 보강 설명 문구)</td><td><code>knn_similar_*</code></td></tr>
+    <tr><td>종합점수</td><td>RuleRanker 산출 0~1 점수 (보조 표시)</td><td><code>rule_score</code></td></tr>
+  </tbody>
+</table>
+
+<h3>3.3 표시하지 않는 것 (의도된 제거)</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:22%">항목</th><th>이유</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>예상가격</td>
+      <td>룰베이스 산식이 "예산 × 평균 낙찰률" 구조라 예산을 늘리면 예상가도 비례 증가하는 문제. 시장가격 정보 0. 회귀 모델(LGBM Regressor) 도입 전까지 표시 안 함(§10).</td>
+    </tr>
+    <tr>
+      <td>클러스터 라벨</td>
+      <td>운영 의사결정에 의미 미미(§6). 군집 ID가 재학습마다 흔들리는 안정성 문제도 있음.</td>
+    </tr>
+    <tr>
+      <td>raw ML probability</td>
+      <td>Classifier는 scale_pos_weight=154로 prior 부풀려짐, Ranker는 lambdarank 절대 단위 없음. calibration 부재(§8.5).</td>
+    </tr>
+    <tr>
+      <td>후보 분산도 (entropy)</td>
+      <td>실험적으로 도입 후 운영 해석 어려워 제거. 분석 보고서 측면 신호로만 보존.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>3.4 후보 0건 시 응답 설계</h3>
+
+<p>키워드+필터 조합으로 후보가 0건인 경우, 단순 빈 화면 대신 원인 분기를 명시한다(유찰률 12.5%, §7.2). <code>empty_reason</code> 필드 + UI 안내 문구를 통해 사용자가 다음 행동을 결정할 수 있다.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:24%"><code>empty_reason</code></th>
+      <th>발동 조건</th>
+      <th>UI 안내 문구</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>keyword_unknown</code></td>
+      <td>키워드가 8종 매핑 사전에 없음</td>
+      <td>"지원되지 않는 키워드입니다. 8종 중에서 선택하세요." + 키워드 리스트</td>
+    </tr>
+    <tr>
+      <td><code>keyword_no_active</code></td>
+      <td>키워드는 매핑되지만 환경공단 1년 활동 BRN 0건</td>
+      <td>"이 품목은 최근 1년간 환경공단 발주 이력이 없습니다. 5년 누적 풀로 확장해서 보시겠습니까?" + 확장 버튼</td>
+    </tr>
+    <tr>
+      <td><code>sr_filter_too_strict</code></td>
+      <td>키워드 풀은 있으나 SR 필터로 모두 제외</td>
+      <td>"SR 필터(여성·장애인·사회적기업) 조건을 완화하면 N건 후보가 있습니다." + 필터 토글</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="s4">4. 점수 산출 — 룰베이스 4축</h2>
+
+<h3>4.1 4축 가중합 — 변수와 산식</h3>
+
+<h4>입력 변수 (후보 풀의 BRN 별 컬럼)</h4>
+<table>
+  <thead>
+    <tr><th style="width:24%">변수</th><th>출처</th><th>의미</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>sr_count</code></td><td><code>mart_company_sr</code></td><td>SR 인증 보유 수 (0~3)</td></tr>
+    <tr><td><code>award_count</code></td><td><code>stg_award</code> 집계</td><td>환경공단 누적 낙찰 건수</td></tr>
+    <tr><td><code>award_total_amt</code></td><td><code>stg_award</code> 합계</td><td>환경공단 누적 낙찰 금액 (원)</td></tr>
+    <tr><td><code>avg_bid_rate</code></td><td><code>stg_award.sucsfbid_rate</code> 평균</td><td>평균 낙찰률 (%, 0~100)</td></tr>
+  </tbody>
+</table>
+
+<h4>축별 점수 산출 절차</h4>
+<table>
+  <thead>
+    <tr>
+      <th style="width:16%">축</th>
+      <th style="width:8%" class="num">가중치</th>
+      <th>산출 절차 (0~1로 정규화)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>SR 다양성</b><br/><code>sr</code></td>
+      <td class="num">0.35</td>
+      <td><b>이진 변환</b>: <code>sr = 1.0 if sr_count &gt; 0 else 0.0</code><br/>자동판별·외부 인증을 구분하지 않고 "보유 여부"만 본다 (§5 의 이진화 사유 참조).</td>
+    </tr>
+    <tr>
+      <td><b>실적</b><br/><code>track</code></td>
+      <td class="num">0.30</td>
+      <td>(1) <code>norm_count = award_count / max_award_count_in_pool</code> — 풀 내 최대값으로 나눈 정규화 건수<br/>(2) <code>norm_bid_rate = avg_bid_rate / 100</code> — 퍼센트를 0~1 비율로<br/>(3) <code>track = 0.6 × norm_count + 0.4 × norm_bid_rate</code><br/>※ <code>avg_bid_rate</code> 가 NULL 인 BRN 은 두 번째 항 가중을 0으로 (1번 항만 반영).</td>
+    </tr>
+    <tr>
+      <td><b>가격경쟁력</b><br/><code>price</code></td>
+      <td class="num">0.20</td>
+      <td>(1) <code>unit_price = award_total_amt / award_count</code> — BRN 평균 단가<br/>(2) <code>price = 1 − percentile_rank(unit_price)</code> — 풀 내 단가 백분위의 역수 (단가 낮을수록 점수↑)<br/>※ 풀 내 단가 산출 가능한 BRN 이 3개 미만이면 0.5 대체값.</td>
+    </tr>
+    <tr>
+      <td><b>공급안정성</b><br/><code>supply</code></td>
+      <td class="num">0.15</td>
+      <td><code>supply = percentile_rank(award_count, in pool)</code> — 풀 내 낙찰 건수 백분위 (건수 많을수록 점수↑)<br/>※ <code>award_count = 0</code> 인 BRN 은 0.0 (활동 신호 부재).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>합산</h4>
+<pre>raw = 0.35 × sr + 0.30 × track + 0.20 × price + 0.15 × supply
+    (4 항목 모두 0~1 범위 → raw 도 0~1 범위)</pre>
+
+<div class="callout">
+  <b>축 상관성 주의:</b> 위 4축은 형식상 독립이지만, <b>실적축 첫 항(<code>award_count / max</code>) 과 공급축(<code>award_count</code> 백분위) 이 동일 변수 `award_count` 에 기반</b>한다. 즉 가중 합계 0.30 + 0.15 = <b>0.45 가 한 신호("환경공단 누적 낙찰 건수") 에 묶임</b>. 실제 독립 신호는 sr (0.35) + 가격 (0.20) = <b>0.55</b> 에 불과하다. 가중치 magnitude를 조정할 때 이 상관을 고려해야 한다 (§5 참조).
+</div>
+
+<h3>4.2 SR floor demote</h3>
+
+<p>후보 풀에 SR 보유 BRN(<code>sr_count &gt; 0</code>) 이 <b>3명 이상</b> 인데 본인은 sr_count=0 인 경우, 원점수(raw) 에서 <b>−1.0을 감산</b> 한다. 원점수 범위가 0~1이므로 −1.0 보정 후에는 SR 보유 후보보다 정렬상 하위권으로 밀린다. 정책 의무비율 충족을 위한 보장 장치다.</p>
+
+<pre>n_sr_in_pool = count(BRN where sr_count &gt; 0, in pool)
+
+final = raw − 1.0   if (n_sr_in_pool ≥ 3) and (sr_count = 0)
+      = raw         otherwise</pre>
+
+<p>이 보정은 "충분히 큰 음수" 라는 크기 조건이 핵심이다. 작은 음수(−0.5)를 쓰면 다른 축 점수가 강한 sr=0 BRN이 SR 보유자보다 위로 올라올 수 있어 정책 의무비율 충족 가능성이 낮아진다. 발동 임계 "3명 이상" 은 K=5 추천에서 SR 보유자만으로 채울 수 있는 최소 수다 (§5).</p>
+
+<h3>4.3 산출 예시 — 펌프 후보 5명 비교</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>BRN</th>
+      <th class="num">SR</th>
+      <th class="num">낙찰N</th>
+      <th class="num">낙찰률%</th>
+      <th class="num">sr축</th>
+      <th class="num">실적축</th>
+      <th class="num">가격축</th>
+      <th class="num">공급축</th>
+      <th class="num">raw</th>
+      <th class="num">최종</th>
+      <th>Tier</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>한마음</td><td class="num">3</td><td class="num">14</td><td class="num">87</td>
+      <td class="num">1.00</td><td class="num">0.95</td><td class="num">0.50</td><td class="num">0.95</td>
+      <td class="num">0.88</td><td class="num good">0.88</td><td><b class="good">A</b></td>
+    </tr>
+    <tr>
+      <td>성광</td><td class="num">1</td><td class="num">9</td><td class="num">91</td>
+      <td class="num">1.00</td><td class="num">0.70</td><td class="num">0.65</td><td class="num">0.80</td>
+      <td class="num">0.83</td><td class="num good">0.83</td><td><b class="good">A</b></td>
+    </tr>
+    <tr>
+      <td>서광</td><td class="num">1</td><td class="num">7</td><td class="num">93</td>
+      <td class="num">1.00</td><td class="num">0.53</td><td class="num">0.96</td><td class="num">0.62</td>
+      <td class="num">0.81</td><td class="num good">0.81</td><td><b class="good">A</b></td>
+    </tr>
+    <tr>
+      <td>대성</td><td class="num">0</td><td class="num">4</td><td class="num">89</td>
+      <td class="num">0.00</td><td class="num">0.45</td><td class="num">0.40</td><td class="num">0.55</td>
+      <td class="num">0.30</td><td class="num bad">−0.70</td><td><b class="bad">C</b> ↓ demote</td>
+    </tr>
+    <tr>
+      <td>신한</td><td class="num">0</td><td class="num">6</td><td class="num">86</td>
+      <td class="num">0.00</td><td class="num">0.50</td><td class="num">0.55</td><td class="num">0.65</td>
+      <td class="num">0.36</td><td class="num bad">−0.64</td><td><b class="bad">C</b> ↓ demote</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>풀에 SR 보유자가 3명 이상(한마음·성광·서광) 이므로 sr=0인 대성·신한은 −1.0 demote. 정렬상 SR 보유 3명이 상위 고정, sr=0 두 명이 후순위. SR 보유자 사이에서는 실적·가격·공급 축이 변별력을 만들어 한마음 → 성광 → 서광 순.</p>
+
+<h3>4.4 등급(Tier)</h3>
+
+<p>최종 점수 분포에 따라 <b>A (우선 추천) / B (추천) / C (검토)</b> 로 분류한다. 원점수 자체는 카드 우측에 보조 표시한다(<code>rule_score 0.83</code> 형태). 보정(calibration) 이 없으므로 "점수 0.83 = 낙찰 확률 83%" 같은 해석은 성립하지 않는다.</p>
+
+<!-- ============================================================ -->
+<h2 id="s5">5. 가중치·보정 값의 근거</h2>
+
+<p>모든 숫자는 휴리스틱이다. 데이터로 학습하거나 calibration을 수행한 부분은 없다. 다만 각 magnitude는 다음 의도를 따른다.</p>
+
+<table>
+  <thead>
+    <tr><th style="width:26%">대상</th><th>설계 의도</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>축 순서<br/>(SR &gt; 실적 &gt; 가격 &gt; 공급)</b></td>
+      <td>시스템 존재 이유가 사회적 가치 정책 의무비율이므로 SR이 1순위. 환경공단에서 경험 있는 BRN을 우대해 안전성을 확보하는 것이 2순위. 가격은 변동성과 노이즈가 커서 비중을 낮춤. 공급안정성은 다른 축과 상관이 있어 변별력이 약함.</td>
+    </tr>
+    <tr>
+      <td><b>SR 가중 0.35</b></td>
+      <td>"SR 1순위" 라는 합의에서 가장 큰 가중. 0.40 이상이면 시장 신호를 너무 죽이고, 0.30 이하면 SR 보유자/미보유자 정렬이 다른 축에 의해 뒤집힐 수 있음.</td>
+    </tr>
+    <tr>
+      <td><b>SR 이진화</b></td>
+      <td>"보유 vs 미보유" 만 점수에 반영하고 보유 개수의 차이는 무시한다. 자동판별(여성기업) 과 외부 인증(사회적기업·장애인기업) 의 가중을 동일하게 둘 정당화가 부족하기 때문에, 개수 가중보다 보유 여부 가중이 안전하다(§7.1 참조).</td>
+    </tr>
+    <tr>
+      <td><b>SR floor demote −1.0</b></td>
+      <td>원점수 범위가 0~1이므로 −1.0 보정 후에는 결과가 음수가 되어 SR 보유 후보보다 정렬상 하위권에 위치한다. −0.5 같은 약한 값을 쓰면 다른 축이 강한 sr=0 BRN이 SR 보유자보다 위로 올라와 정책 의무비율 충족 가능성이 낮아진다. 핵심은 값의 크기가 아니라 "충분히 큰 음수" 라는 조건이다.</td>
+    </tr>
+    <tr>
+      <td><b>SR floor 발동 조건 "3명 이상"</b></td>
+      <td>풀에 SR 보유자가 1~2명인 경우는 풀 자체가 얕아서 SR 미보유 BRN을 demote하면 추천 카드 자체가 부족해진다. 3명을 기준으로 잡으면 K=3~5 추천에서 SR 보유자만으로 채울 수 있다.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>가중치 magnitude 의 풀-크기 의존성</h3>
+
+<p>SR 가중 0.30 vs 0.35 vs 0.40 의 실효 차이는 풀 크기에 강하게 의존한다. <b>두꺼운 풀(예: 펌프 115, 약품 등)</b> 에서는 SR floor demote가 정렬을 강제하므로 magnitude 차이가 결과에 거의 영향이 없다. 반면 <b>얕은 풀(단독공급 + 2~5명 = 전체 품목의 82%, §7.2)</b> 에서는 magnitude가 실제 정렬을 바꾼다. 풀 크기별 동적 가중치(예: 풀 ≥10 → 0.30, &lt;10 → 0.40) 는 분기 회의 검토 후보다(§10.1).</p>
+
+<h3>검증 한계</h3>
+
+<ul>
+  <li>운영 피드백 라벨(좋은 추천 / 나쁜 추천) 이 수집되지 않아 가중치 학습은 불가능하다.</li>
+  <li>A/B 테스트는 수행되지 않았다.</li>
+  <li>"왜 0.35인가" 에 대한 답은 없다. 답할 수 있는 것은 순서뿐이다.</li>
+  <li>운영 단계 진입 후 사용자 클릭/선택 로그를 수집하면 메타-ranker(가중치 학습)로 진화 가능(§10).</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="s6">6. 클러스터링의 운영 적용 한계</h2>
+
+<h3>6.1 시도 setup</h3>
+
+<p>15개 피처를 RobustScaler로 정규화한 뒤 UMAP(5D 학습용 / 2D 시각화용 분리) → HDBSCAN으로 군집화했다.</p>
+
+<table>
+  <thead>
+    <tr><th style="width:30%">항목</th><th>값</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>대상 BRN</td><td>1,694 (G2B 낙찰 이력 보유 BRN 중 클러스터링 입력 표본 — <code>artifacts/clustering_metrics.json</code>). 참고: DA 검증의 활동 풀 정의는 G2B 낙찰 전기간 1,700 / env-corp 누적 1,318 / 최근 1년 활성 492 셋이며, 1,694는 클러스터링 학습 시점의 별도 모집단.</td></tr>
+    <tr><td>피처</td><td>15개: env_award_count_total, env_award_amt_total_log, env_avg_rate, env_dminstt_count, g2b_age_years, prefix4_diversity, main_prdct_consistency, is_manufacturer_flag, sr_count, real_sr_flag, female_ceo_flag, bid_lost_ratio, dormant_months, avg_unit_price_zscore, price_volatility</td></tr>
+    <tr><td>UMAP</td><td>n_neighbors=15, min_dist=0.1, metric=euclidean, random_state=42</td></tr>
+    <tr><td>HDBSCAN</td><td>min_cluster_size=30, min_samples=10</td></tr>
+    <tr><td>결과</td><td>12개 군집 + noise 50개(2.95%)</td></tr>
+    <tr><td>Silhouette</td><td>0.499</td></tr>
+    <tr><td>Davies-Bouldin</td><td>0.660</td></tr>
+    <tr><td>비교 baseline</td><td>KMeans(k=8) 병행 학습으로 합리성 교차 점검</td></tr>
+  </tbody>
+</table>
+
+<p>정량 지표만 보면 양호하다 — <b>Silhouette 0.5</b> (1에 가까울수록 군집 분리 명확) 와 <b>Davies-Bouldin 0.66</b> (0에 가까울수록 군집 간 분리 양호) 모두 일반 임계 통과. 그러나 운영 측면에서는 무의미했다.</p>
+
+<h3>6.2 결과 ≠ 통찰 — 군집이 도메인 분류의 재확인이었음</h3>
+
+<p>12군집 라벨을 사후 분석한 결과 (prefix4 × 휴면 여부 × SR 진위) 의 카르테시안 곱과 거의 일치했다.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>군집 분리 축</th>
+      <th>이미 데이터에 존재하는 분류</th>
+      <th>대체 방법</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>품목(prefix4)</td>
+      <td>4015 펌프 / 4111 계측 / 4710 약품 / 3912 전기 등</td>
+      <td><code>mart_company_master.main_dtil_prdct_cd</code> 직접 사용</td>
+    </tr>
+    <tr>
+      <td>활동성(휴면)</td>
+      <td><code>dormant_months ≥ 24</code></td>
+      <td>boolean 컬럼 하나로 분리 가능</td>
+    </tr>
+    <tr>
+      <td>SR 진위</td>
+      <td>real_sr 보유 여부</td>
+      <td><code>disabled OR social_corp_flag</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>즉 비지도 학습이 추가로 발견한 구조가 아니라 기존 도메인 분류의 재확인이었다.</p>
+
+<h3>6.3 운영에 도움이 안 된 세 가지 사유</h3>
+
+<ol>
+  <li><b>의사결정 단위와 군집 단위의 불일치</b> — 추천은 "1 발주 × N 후보" 단위로 일어나는데, 군집은 전체 풀을 한 번 자른 정적 라벨이다. Stage 1 keyword retrieve로 풀이 좁아진 시점에서 군집 정보는 거의 노이즈가 된다.</li>
+  <li><b>이미 도메인 코드로 가능한 분류</b> — prefix4 + dormant_months + real_sr_flag 세 컬럼이면 군집 라벨과 거의 같은 정보가 나온다. 별도 군집 enum을 두면 한국어 라벨에 의존한 분기(Hyrum's Law) 위험까지 추가된다. 라벨 문구 한 글자만 바뀌어도 분기가 조용히 깨질 수 있다.</li>
+  <li><b>데이터 규모 한계</b> — 활성 BRN 1,694명, 학습 positive 449건은 UMAP+HDBSCAN의 안정성을 보장하기에 빈약할 수 있다. 재학습마다 군집 ID가 흔들릴 위험이 있으며 (안정성 정량 검증 미수행), 운영 일관성 보장이 어려우므로 보수적으로 운영 경로에서 제외한다. 사용자에게 "이번 주의 cluster 1" 과 "지난주의 cluster 1" 의 의미를 일관되게 설명할 수 없는 상황을 피한다.</li>
+</ol>
+
+<p>결과적으로 운영 카드 표층에서 cluster_label을 제거했고, 가중치 보정에서도 클러스터 신호를 제거했다. 코드 자산(<code>pipeline/clustering.py</code>, <code>artifacts/clustering_*</code>) 은 archival 목적으로 보존하되 운영 경로에서는 분리한다.</p>
+
+<div class="callout">
+  <b>운영상 시사점:</b> 정량 지표(Silhouette, DBI) 가 양호해도 새로운 도메인 의미가 도출되지 않으면 운영 의사결정에 추가 기여가 제한적이다. 비지도 학습은 "발견" 도구가 아니라 기존 분류의 "검증" 도구로 위치하는 편이 적합하다.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s7">7. 데이터 핵심 발견 (DA)</h2>
+
+<h3>7.1 SR 인증 인플레이션 — 최우선 운영 리스크</h3>
+
+<p>CLAUDE.md §9의 "여성기업인증여부=Y는 대표자 성별 자동 판별, 인증서 보유와 무관" 경고가 SQL 직접 산출로 정량 확인되었다.</p>
+
+<h4>7.1.1 인증의 진위 메커니즘</h4>
+
+<div class="compare-grid">
+  <div class="compare-box">
+    <div class="h">자동판별 (auto_sr)</div>
+    여성기업 인증여부 = Y<br/>
+    <br/>
+    <b>판별 방법</b>: 조달업체 CSV의 대표자 성명 → 성별 자동 추정<br/>
+    <b>외부 검증</b>: 없음<br/>
+    <b>의미</b>: 대표자가 여성인 모든 업체에 자동 부여 (실제 여성기업 인증서 보유와 무관)
+  </div>
+  <div class="compare-box">
+    <div class="h">외부 인증 (real_sr)</div>
+    사회적기업 / 장애인기업 인증여부 = Y<br/>
+    <br/>
+    <b>판별 방법</b>: 외부 인증 기관 발급 인증서<br/>
+    <b>외부 검증</b>: 있음 (공공구매 인증서 API로 추가 검증 가능)<br/>
+    <b>의미</b>: 정책 의무 충족의 진짜 근거
+  </div>
+</div>
+
+<h4>7.1.2 데이터 분포</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>풀</th>
+      <th class="num">n</th>
+      <th class="num">any SR<br/>(자동 + 외부)</th>
+      <th class="num">real_sr<br/>(외부 인증)</th>
+      <th class="num">female 단독<br/>(자동만)</th>
+      <th class="num">female 단독 비율</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>마스터 전체</td><td class="num">643,472</td><td class="num">64,626 (10.0%)</td><td class="num">~9,764 (1.5%)</td><td class="num">~54,862</td><td class="num">~85%</td></tr>
+    <tr><td>환경공단 누적 풀</td><td class="num">1,318</td><td class="num">327 (24.8%)</td><td class="num"><b>67 (5.1%)</b></td><td class="num">260</td><td class="num">80%</td></tr>
+    <tr><td>1년 활성 풀</td><td class="num">492</td><td class="num">128 (26.0%)</td><td class="num">29 (5.9%)</td><td class="num">99</td><td class="num">77%</td></tr>
+  </tbody>
+</table>
+
+<div class="callout bad">
+  <b>핵심 발견:</b> 환경공단 활동 BRN 1,318명 중 "SR 보유" 카드가 327개 떠도, 그중 80%(260개) 는 자동판별 여성 CEO 단독이다. 외부 인증서 보유 풀은 67명(5.1%) 에 불과하다. 정책 의무비율 보고에 자동판별 단독을 포함하면 실질 충족도가 과대평가된다.
+</div>
+
+<h4>7.1.3 플래그별 분포</h4>
+
+<table>
+  <thead><tr><th>플래그</th><th class="num">Y 개수</th><th class="num">비율(마스터 643k 기준)</th></tr></thead>
+  <tbody>
+    <tr><td><code>female_ceo_flag</code> (자동판별)</td><td class="num">57,915</td><td class="num">9.00%</td></tr>
+    <tr><td><code>disabled_corp_flag</code> (외부 인증)</td><td class="num">6,308</td><td class="num">0.98%</td></tr>
+    <tr><td><code>social_corp_flag</code> (외부 인증)</td><td class="num">3,456</td><td class="num">0.54%</td></tr>
+  </tbody>
+</table>
+
+<p>자동판별 여성 CEO 플래그가 외부 인증 두 플래그 합계의 약 6배. "any SR" 카운트의 88%가 female_ceo_flag 한 항목으로 부풀려진다.</p>
+
+<h3>7.2 후보 풀 규모와 단독공급 비중</h3>
+
+<table>
+  <thead><tr><th>풀 정의</th><th class="num">BRN 수</th><th>비고</th></tr></thead>
+  <tbody>
+    <tr><td>조달업체 마스터 전체</td><td class="num">643,472</td><td>등록 수는 많으나 활성 비율은 낮음</td></tr>
+    <tr><td>G2B 낙찰 이력 보유</td><td class="num">1,700</td><td>마스터의 0.26%</td></tr>
+    <tr><td><b>최근 1년 낙찰 이력 (활성)</b></td><td class="num"><b>492</b></td><td>"추천 가능 후보" 의 실질 상한</td></tr>
+    <tr><td>환경공단 누적 풀</td><td class="num">1,318</td><td>5년 누적</td></tr>
+  </tbody>
+</table>
+
+<h4>품목별 supplier 분포 (n = 373 품목)</h4>
+
+<table>
+  <thead><tr><th>풀 크기</th><th class="num">품목 수</th><th class="num">비율</th><th>운영 권장</th></tr></thead>
+  <tbody>
+    <tr><td>1명 (단독공급)</td><td class="num">179</td><td class="num"><b>48.0%</b></td><td>수의계약</td></tr>
+    <tr><td>2~5명 (제한경쟁)</td><td class="num">128</td><td class="num">34.3%</td><td>제한경쟁</td></tr>
+    <tr><td>6명+ (일반경쟁)</td><td class="num">66</td><td class="num">17.7%</td><td>일반경쟁</td></tr>
+  </tbody>
+</table>
+
+<p>mean supplier 4.47 / median 2. 품목 절반이 단독공급이다. KPI "계약방식 권장" 임계(1 / 2~5 / 6+) 는 이 분포와 부합한다. 단, 단독공급 비율 48%로 높아 "단독공급 — 가격경쟁 어려움" 경고가 운영상 자주 노출될 것으로 예상된다.</p>
+
+<p>유찰 비율 12.5% (env-corp 2,218건 기준) — 후보 0건 엣지 케이스의 상한 근사.<br/>
+<small style="color:#6b7280">※ "입찰 참여자수 median 4명" 수치는 출처 검증 미완료. <code>stg_opening_result</code> 참여자 컬럼 기반 SQL 검증을 후속 EDA(§10.1)로 분리.</small></p>
+
+<h3>7.3 발주 빈도와 추세</h3>
+
+<div class="bar-chart">
+  <div class="bar-row">
+    <span class="bar-label">2021 (4월~)</span>
+    <div class="bar-track"><div class="bar" style="width: 86.7%;"></div></div>
+    <span class="bar-value">575건</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">2022 ← peak</span>
+    <div class="bar-track"><div class="bar" style="width: 100%;"></div></div>
+    <span class="bar-value">663건</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">2023</span>
+    <div class="bar-track"><div class="bar" style="width: 83.6%;"></div></div>
+    <span class="bar-value">554건</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">2024</span>
+    <div class="bar-track"><div class="bar" style="width: 75.4%;"></div></div>
+    <span class="bar-value">500건</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">2025</span>
+    <div class="bar-track"><div class="bar muted" style="width: 70.3%;"></div></div>
+    <span class="bar-value">466건</span>
+  </div>
+  <div class="bar-row">
+    <span class="bar-label">2026 (1~5월)</span>
+    <div class="bar-track"><div class="bar muted" style="width: 22.3%;"></div></div>
+    <span class="bar-value">148건</span>
+  </div>
+</div>
+
+<ul>
+  <li>4개년 평균 545.75건/년 ≈ <b>일 1.50건</b></li>
+  <li>CLAUDE.md §10의 "연 612건" 은 2022 peak 기준</li>
+  <li>2022 → 2025 누적 <b>−29.7%</b> (연 약 −10% 감소)</li>
+  <li>운영 시스템 효용 측정 KPI(월간 추천 건수, 채택률) 설계 시 발주 감소 영향 분리 필요</li>
+</ul>
+
+<h3>7.4 발주 기관 (dminstt) 별 분포</h3>
+
+<p>dminstt(수요기관 코드) = 환경공단 본사 1 + 권역본부 8 + 사업단 1, 총 10개. 각 기관이 자체 발주 권한을 가진다.</p>
+
+<div class="bar-chart">
+  <div class="bar-row"><span class="bar-label">본사</span><div class="bar-track"><div class="bar" style="width: 100%;"></div></div><span class="bar-value">718</span></div>
+  <div class="bar-row"><span class="bar-label">수도권동부</span><div class="bar-track"><div class="bar" style="width: 59.5%;"></div></div><span class="bar-value">427</span></div>
+  <div class="bar-row"><span class="bar-label">충청권</span><div class="bar-track"><div class="bar" style="width: 58.5%;"></div></div><span class="bar-value">420</span></div>
+  <div class="bar-row"><span class="bar-label">부산울산경남</span><div class="bar-track"><div class="bar" style="width: 46.2%;"></div></div><span class="bar-value">332</span></div>
+  <div class="bar-row"><span class="bar-label">수도권서부</span><div class="bar-track"><div class="bar" style="width: 43.7%;"></div></div><span class="bar-value">314</span></div>
+  <div class="bar-row"><span class="bar-label">광주전남제주</span><div class="bar-track"><div class="bar" style="width: 38.4%;"></div></div><span class="bar-value">276</span></div>
+  <div class="bar-row"><span class="bar-label">대구경북</span><div class="bar-track"><div class="bar" style="width: 35.9%;"></div></div><span class="bar-value">258</span></div>
+  <div class="bar-row"><span class="bar-label">강원</span><div class="bar-track"><div class="bar muted" style="width: 10.2%;"></div></div><span class="bar-value">73</span></div>
+  <div class="bar-row"><span class="bar-label">물산업클러스터</span><div class="bar-track"><div class="bar muted" style="width: 9.3%;"></div></div><span class="bar-value">67</span></div>
+  <div class="bar-row"><span class="bar-label">전북</span><div class="bar-track"><div class="bar muted" style="width: 2.9%;"></div></div><span class="bar-value">21</span></div>
+</div>
+
+<p>본사 + 상위 4개 본부가 전체의 76.4%. 전북·강원은 ML 학습 시 데이터 부족 영역. 권역별 가중치를 룰베이스에 추가할 경우 이 영역의 대체값 정책이 필요하다.</p>
+
+<h3>7.5 낙찰가·낙찰률 분포</h3>
+
+<table>
+  <thead><tr><th>지표</th><th class="num">값</th><th>해석</th></tr></thead>
+  <tbody>
+    <tr><td>낙찰가 mean</td><td class="num">305,665,453원 (≈ 3억)</td><td rowspan="4">right-skew 가 크다. 대형 시설 공사 이상치(outlier) 가 평균을 끌어올림. 카드 표시 시 median 기준이 사용자 직관에 부합.</td></tr>
+    <tr><td>낙찰가 median</td><td class="num">86,602,307원 (≈ 8,660만)</td></tr>
+    <tr><td>낙찰가 Q25</td><td class="num">43,387,150원</td></tr>
+    <tr><td>낙찰가 Q75</td><td class="num">238,214,000원</td></tr>
+    <tr><td>낙찰률 mean</td><td class="num">92.24%</td><td rowspan="4">88~99.5% 좁은 밴드에 집중. 가격축의 구조적 변별력 한계 — 룰베이스에서 price 0.20 가중치를 더 키워도 차별화 어려움.</td></tr>
+    <tr><td>낙찰률 median</td><td class="num">89.69%</td></tr>
+    <tr><td>낙찰률 Q25 / Q75</td><td class="num">88.01% / 99.53%</td></tr>
+    <tr><td>80% 미만 극단 저가</td><td class="num">14건 (0.6%)</td></tr>
+  </tbody>
+</table>
+
+<h3>7.6 키워드 커버리지</h3>
+
+<p>8 키워드 매핑(<code>pipeline/item_keywords.py</code>) 은 env-corp 발주의 약 <b>75%</b> 를 커버한다. 매핑 외 25% 영역 — <b>prefix4 단위 env-corp 발주 (4개 prefix4 의 전체 발주 합계 738건)</b>:</p>
+
+<table>
+  <thead><tr><th>prefix4</th><th>품목</th><th class="num">env 공고 (전체)</th></tr></thead>
+  <tbody>
+    <tr><td>3010</td><td>운반·설치</td><td class="num">242</td></tr>
+    <tr><td>3912</td><td>전기 설비 (배전반·계장·UPS)</td><td class="num">222</td></tr>
+    <tr><td>2410</td><td>운반·물류 장비</td><td class="num">171</td></tr>
+    <tr><td>1214</td><td>산업용 가스</td><td class="num">103</td></tr>
+  </tbody>
+</table>
+
+<p>이 4개 prefix4 합계 738건이 키워드 매핑 밖. v3 자유입력 보류의 정량적 한계다. 분기별 키워드 5~10개 점진 확장을 권장한다(완전 자유입력은 잘못된 BRN 풀 반환 위험으로 미지원 유지).</p>
+
+<h3>7.7 KNN cold-start (장애인기업 보강)</h3>
+
+<table>
+  <thead><tr><th>지표</th><th class="num">값</th></tr></thead>
+  <tbody>
+    <tr><td>장애인기업 전체</td><td class="num">6,308</td></tr>
+    <tr><td>환경공단 검증 풀과 유의 매칭</td><td class="num">265 (4.2%)</td></tr>
+    <tr><td>참조 BRN 유니크</td><td class="num">124</td></tr>
+    <tr><td>similarity median</td><td class="num">0.41</td></tr>
+    <tr><td>similarity ≥ 0.85 강매칭</td><td class="num">6건</td></tr>
+    <tr><td>참조 BRN 환경공단 평균 발주</td><td class="num">1.85회 (median 1)</td></tr>
+  </tbody>
+</table>
+
+<p>전반적 유사도는 낮고 강매칭은 6건. 카드 설명 문구는 다음 조건 양쪽 충족 시에만 표시 권장:</p>
+
+<ul>
+  <li>similarity ≥ 0.7</li>
+  <li>참조 BRN 환경공단 발주 ≥ 3회</li>
+</ul>
+
+<p>장애인기업 cold-start 보강 효과는 제한적(전체의 4.2%) 이며, KNN은 핵심 의사결정 요소가 아니라 보조 설명 문구로만 위치한다.</p>
+
+<h3>7.8 기타 데이터 품질 신호</h3>
+
+<ul>
+  <li><code>region_code</code> null 22% (마스터), KNN 풀에선 30% — 정규화 파이프라인 점검 필요. 권역 가중치 도입 시 대체값 정책 필수.</li>
+  <li><code>main_dtil_prdct_cd</code> null <b>39.0%</b> (마스터 251,053건) — cold-start BRN 추천 경로에서 <code>main_prdct</code> 를 키로 사용하면 39% 통째 누락. v3 자유입력 또는 cold-start 강화 시 별도 정규화 task 필요.</li>
+  <li>경기·서울 마스터 47% 집중. 권역 편향이 후보 풀에 반영될 가능성.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="s8">8. ML 학습 결과 (DS) — 시장 변수 vs 정책 의무 변수</h2>
+
+<h3>8.1 학습 setup 비교</h3>
+
+<table>
+  <thead>
+    <tr><th>항목</th><th>Classifier (<code>lgbm_baseline.txt</code>)</th><th>Ranker (<code>lgbm_ranker.txt</code>)</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>objective</td><td><code>binary sigmoid</code></td><td><code>lambdarank</code></td></tr>
+    <tr><td>트리 수</td><td>54</td><td>67</td></tr>
+    <tr><td>피처 수</td><td>32</td><td>32 (동일)</td></tr>
+    <tr><td>train rows</td><td>267,261</td><td>47,150 (그룹 단위 압축)</td></tr>
+    <tr><td>test rows</td><td>75,758</td><td>13,087</td></tr>
+    <tr><td>test bids</td><td>612</td><td>601</td></tr>
+    <tr><td>test winners</td><td>449</td><td>449 (동일 winner 집합)</td></tr>
+    <tr><td>scale_pos_weight<br/><small style="color:#6b7280">(불균형 보정 가중치)</small></td><td>154.02 — 학습 데이터의 음성:양성 비율 (낙찰 1 : 미낙찰 154) 그대로 양성 가중치로 적용</td><td>해당 없음 (group-wise 로 학습)</td></tr>
+  </tbody>
+</table>
+
+<p>학습 풀(prefix_warm pool) 은 동일. 두 모델의 차이는 <b>학습 목표(task)</b> 에 있다.</p>
+
+<ul>
+  <li><b>Classifier — pointwise</b>: 각 (공고, BRN) 쌍을 독립적으로 0/1 확률로 예측. 같은 공고에 묶인 후보들의 관계를 학습하지 않는다. 출력은 글로벌 분포에서의 절대 확률.</li>
+  <li><b>Ranker — listwise (lambdarank)</b>: 같은 공고(group)에 묶인 후보들을 한 묶음으로 보고, 그 안에서 낙찰자가 상위에 오도록 직접 학습. 출력은 그룹 내 상대 점수 (절대 단위 없음). 추천 task 의 본연 형식과 일치.</li>
+</ul>
+
+<p>positive 절대수(449) 는 두 모델 동일. Ranker가 그룹 단위로 압축 학습하므로 train rows 가 약 5.7배 적다.</p>
+
+<h3>8.2 두 모델 지표 비교</h3>
+
+<p>본 표의 평가 지표 정의:</p>
+<ul>
+  <li><b>AUC</b> — 이진 분류기의 글로벌 분리 능력 (0.5 무작위, 1 완벽). 같은 BRN 두 명 중 누가 낙찰자인지의 글로벌 식별력.</li>
+  <li><b>HR@5 / HR@10</b> (Hit Rate) — 상위 K개 추천 안에 정답(낙찰자) 이 포함되는 비율. 운영자가 보는 카드의 실효 적중률.</li>
+  <li><b>NDCG@5</b> — 정답 위치에 가중치를 둔 순위 품질 (0~1). 0.62 ≈ 평균 낙찰자가 top-3 위치에 있음.</li>
+  <li><b>SR Cov@5</b> — 상위 5개 추천 중 SR 인증 보유 BRN 비율. baseline 은 풀 평균 SR 비율.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>지표</th>
+      <th class="num">Classifier<br/>(pointwise)</th>
+      <th class="num">Ranker<br/>(lambdarank)</th>
+      <th class="num">Δ</th>
+      <th>해석</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>AUC</td><td class="num">0.858</td><td class="num">0.878</td><td class="num">+0.02</td><td>글로벌 분리만 평가 — 거의 차이 없음</td></tr>
+    <tr><td><b>HR@5</b></td><td class="num">0.41</td><td class="num"><b>0.77</b></td><td class="num"><b>+0.36</b></td><td>bid 내 top-5 적중률 — 운영자가 보는 값</td></tr>
+    <tr><td>HR@10</td><td class="num">0.56</td><td class="num">0.92</td><td class="num">+0.36</td><td>top-10 적중률</td></tr>
+    <tr><td>NDCG@5</td><td class="num">0.30</td><td class="num">0.62</td><td class="num">+0.31</td><td>순위 품질 (winner 위치)</td></tr>
+    <tr><td>SR Cov@5</td><td class="num">0.083</td><td class="num">0.062</td><td class="num">−0.02</td><td>baseline 0.05~0.06 대비 의미 있는 향상 X</td></tr>
+  </tbody>
+</table>
+
+<div class="callout info">
+  <b>AUC 차이는 0.02에 불과한데 HR@5는 두 배.</b> AUC는 글로벌 pointwise 분리만 평가하고, HR@k는 bid 내 top-k 정확도를 본다. 운영 의사결정자가 보는 것은 후자다. Ranker의 +0.36 격차는 모델 용량 증가가 아니라 task 정의(공고 내 listwise 순위) 가 운영 질문과 일치한 결과다.
+</div>
+
+<p>Ranker의 HR@10 0.92는 공고 단위 top-10 안에 낙찰자가 대부분 포함됨을 의미한다. NDCG@5 0.62는 평균 낙찰자가 top-3 위치에 있음을 시사한다. SR Cov@5는 두 모델 모두 baseline 대비 향상이 작으므로, SR 다양성은 모델이 자연 학습하지 않는다. 따라서 명시적 floor/demote 룰로 강제하는 현재 설계가 정합적이다.</p>
+
+<h3>8.3 Feature importance (Classifier top 10)</h3>
+
+<div class="bar-chart">
+  <div class="bar-row"><span class="bar-label">bid_dtil_prdct_no</span><div class="bar-track"><div class="bar" style="width: 100%;"></div></div><span class="bar-value">1,708k</span></div>
+  <div class="bar-row"><span class="bar-label">g2b_age_years</span><div class="bar-track"><div class="bar" style="width: 91.3%;"></div></div><span class="bar-value">1,560k</span></div>
+  <div class="bar-row"><span class="bar-label">env_avg_rate_pit</span><div class="bar-track"><div class="bar" style="width: 86.1%;"></div></div><span class="bar-value">1,471k</span></div>
+  <div class="bar-row"><span class="bar-label">days_since_last_award</span><div class="bar-track"><div class="bar" style="width: 48.1%;"></div></div><span class="bar-value">823k</span></div>
+  <div class="bar-row"><span class="bar-label">brn_item_award_count</span><div class="bar-track"><div class="bar" style="width: 30.4%;"></div></div><span class="bar-value">519k</span></div>
+  <div class="bar-row"><span class="bar-label">item_pool_density</span><div class="bar-track"><div class="bar" style="width: 21.9%;"></div></div><span class="bar-value">374k</span></div>
+  <div class="bar-row"><span class="bar-label">brn_dminstt_count</span><div class="bar-track"><div class="bar" style="width: 19.1%;"></div></div><span class="bar-value">326k</span></div>
+  <div class="bar-row"><span class="bar-label">item_recent_unmet</span><div class="bar-track"><div class="bar" style="width: 18.0%;"></div></div><span class="bar-value">308k</span></div>
+  <div class="bar-row"><span class="bar-label">presmpt_prce</span><div class="bar-track"><div class="bar" style="width: 15.4%;"></div></div><span class="bar-value">263k</span></div>
+  <div class="bar-row"><span class="bar-label">brn_item_avg_rate</span><div class="bar-track"><div class="bar" style="width: 12.6%;"></div></div><span class="bar-value">216k</span></div>
+</div>
+
+<p>상위 10개 피처가 모두 시장·이력·시점 변수다. 카테고리별로:</p>
+
+<ul>
+  <li><b>시장 (품목·풀)</b>: bid_dtil_prdct_no, item_pool_density, item_recent_unmet</li>
+  <li><b>업체 이력</b>: g2b_age_years</li>
+  <li><b>시점(PIT) 이력</b>: env_avg_rate_pit, days_since_last_award, brn_item_award_count, brn_dminstt_count, brn_item_avg_rate</li>
+  <li><b>공고 속성</b>: presmpt_prce</li>
+</ul>
+
+<h3>8.4 importance = 0 피처가 말하는 것</h3>
+
+<table>
+  <thead>
+    <tr><th>피처</th><th class="num">Classifier</th><th class="num">Ranker</th><th>함의</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>real_sr_flag</code></td><td class="num zero">0</td><td class="num">77</td><td>SR 인증 자체는 winner 결정 신호로 거의 작동하지 않음</td></tr>
+    <tr><td><code>social_corp_flag</code></td><td class="num zero">0</td><td class="num">165</td><td>〃</td></tr>
+    <tr><td><code>disabled_corp_flag</code></td><td class="num zero">0</td><td class="num">157</td><td>〃</td></tr>
+    <tr><td><code>female_ceo_flag</code></td><td class="num zero">0</td><td class="num">189</td><td>〃 (자동판별)</td></tr>
+    <tr><td><code>is_manufacturer</code></td><td class="num zero">0</td><td class="num">327</td><td>Classifier에선 무관, Ranker에선 약한 분별력</td></tr>
+    <tr><td><code>main_prdct_match</code></td><td class="num zero">0</td><td class="num">478</td><td>〃</td></tr>
+    <tr><td><code>bid_quarter</code></td><td class="num zero">0</td><td class="num zero">0</td><td>양 모델 모두 무의미 (월 단위로 흡수)</td></tr>
+  </tbody>
+</table>
+
+<div class="callout info">
+  <b>해석 — 시장 변수와 정책 의무 변수의 분리:</b><br/>
+  실제 낙찰을 결정하는 것은 BRN 이력, 품목 적합도, 시기 같은 시장 변수다. SR 인증은 정책 의무 충족 여부를 보장하는 별도 차원이다. Classifier가 SR 4피처에 0 importance를 부여한 것은 도메인 사실의 반영으로 해석할 수 있다. Ranker가 작은 importance(77~189) 를 부여한 것은 group 내 동률 후보를 가르는 tie-break 신호로 사용했기 때문이다.<br/><br/>
+  단, importance=0 은 SR 정보가 다른 피처 (<code>g2b_age_years</code>, <code>corp_size</code> 등) 에 간접 인코딩되어 트리 분할 선택을 받지 못했을 가능성도 있다. 두 가설 중 어느 쪽이든 운영 결론(SR 은 룰로 강제) 은 동일하다.<br/><br/>
+  <b>운영적 함의:</b> SR 다양성은 모델이 학습하는 것이 아니라 룰로 강제하는 것이 옳다. 룰베이스 4축의 <code>sr_diversity 0.35 + SR floor demote</code> 설계는 ML의 한계 회피가 아니라 도메인 정합 설계다. ML이 시장을 설명하고, 룰이 정책을 강제한다 — 두 층의 분리가 의도된 설계임을 importance=0 이 뒷받침한다.
+</div>
+
+<h3>8.5 운영 적용 가능성</h3>
+
+<h4>8.5.1 사전탐색 모드 미사용 사유</h4>
+
+<p>두 모델 모두 (공고, BRN) 쌍 단위로 학습됨. 사전탐색 모드는 공고가 없으므로 공고 측 피처(<code>bid_dtil_prdct_no</code>, <code>presmpt_prce</code>, <code>asign_bdgt_amt</code>, <code>cntrct_cncls_mthd_nm</code>, <code>bid_dminstt_cd</code>) 를 구성할 수 없다. 임의 생성(synthesize) 한 값을 입력하면 학습 분포 밖이 되어 예측 신뢰도가 낮아진다.</p>
+
+<h4>8.5.2 Phase 2 "공고-후 추천 모드" 의 교체 지점</h4>
+
+<p>공고가 게시된 직후 후보 BRN 풀을 정렬하는 시나리오에서는 Ranker가 직접 적합:</p>
+<ul>
+  <li>HR@5 0.77 / HR@10 0.92 → 운영 기대치 충족</li>
+  <li>Phase 2 카드 UX: 기본 K=5 노출 + "추가 5건 펼침" 버튼 (HR@10 0.92 활용)</li>
+  <li><code>RecommendationV2Item.ml_score</code> 필드 이미 자리 잡힘 (인터페이스 한 줄 swap)</li>
+  <li><code>pipeline.ranker.Ranker</code> Protocol 인터페이스 보존</li>
+</ul>
+
+<div class="callout">
+  <b>"한 줄 교체" 의 한계:</b> 인터페이스 교체와 운영 가능성은 다른 차원이다. 공고 측 피처 6개 (<code>bid_dtil_prdct_no</code>, <code>presmpt_prce</code>, <code>asign_bdgt_amt</code>, <code>cntrct_cncls_mthd_nm</code>, <code>bid_dminstt_cd</code>, <code>bid_month</code>) 의 임의 생성, PIT 피처 재계산, 보정(calibration) 등 사전 조건이 충족되어야 실제 운영이 가능하다. 인터페이스 교체 자체는 분 단위지만 사전 조건은 별도 작업이다.
+</div>
+
+<h4>8.5.3 원점수 확률(raw probability) 노출 금지</h4>
+
+<p>Classifier scale_pos_weight=154 → 출력 sigmoid 값의 prior가 인위적으로 부풀려짐. "BRN 낙찰 확률 = 0.87" 같은 해석 성립 X.<br/>
+Ranker lambdarank score → 절대 단위 정의 없음. 순위 점수일 뿐.</p>
+
+<p>따라서 두 모델 모두 등급(A/B/C) 또는 순위로만 제시 (CLAUDE.md §9 와 일관).</p>
+
+<!-- ============================================================ -->
+<h2 id="s9">9. 데이터 운영 모델</h2>
+
+<h3>9.1 갱신 주기 — 주 1회</h3>
+
+<table>
+  <thead><tr><th>레이어</th><th>주기</th><th>스케줄</th></tr></thead>
+  <tbody>
+    <tr><td>Raw 적재 (G2B API 4종)</td><td>주 1회</td><td>월요일 03:00 KST</td></tr>
+    <tr><td>stg_* (정규화 staging)</td><td>주 1회</td><td>Raw 직후, full rebuild from raw</td></tr>
+    <tr><td>mart_company_master / mart_company_sr</td><td>분기 1회 + 신규 BRN 매주</td><td>CSV 갱신 시 + incremental upsert</td></tr>
+    <tr><td>mart_item_supply</td><td>주 1회</td><td>full rebuild</td></tr>
+    <tr><td>mart_features_at_bid (PIT 피처)</td><td>월 1회</td><td>LGBM 학습 직전. 룰베이스 운영엔 불필요</td></tr>
+    <tr><td>LGBM 학습</td><td>월 1회 또는 데이터 +20% 시</td><td>수동 — <code>scripts/train_*.py</code></td></tr>
+    <tr><td>룰베이스 가중치 검토</td><td>분기 1회</td><td>수동, 운영팀 회의 결정</td></tr>
+  </tbody>
+</table>
+
+<h3>9.2 주 1회가 충분한 이유</h3>
+
+<ul>
+  <li>환경공단 발주 빈도: 일 1.5건 (4개년 평균). 주 누락 ≈ 10건.</li>
+  <li>특정 prefix4 단위로 보면 주 1건 미만 → 의사결정 단위에서 신선도 영향 미미.</li>
+  <li>활성 BRN 풀이 5년 누적 1,700개 / 1년 활성 492개 → 풀 변동성 자체가 낮음. 어제 새 BRN 1개 추가될 확률 ≈ 0.</li>
+  <li>일별 갱신은 운영 부담만 늘리고 의사결정 품질은 향상 미미.</li>
+</ul>
+
+<h3>9.3 권한 분리 — 사용자는 ingest를 트리거하지 않는다</h3>
+
+<table>
+  <thead><tr><th>역할</th><th>권한</th><th>화면</th></tr></thead>
+  <tbody>
+    <tr><td>공무원 사용자</td><td>웹 대시보드 조회만</td><td>대시보드 + 데이터 기준일 표기</td></tr>
+    <tr><td>운영팀</td><td>ingest 스케줄·DB·모델 재학습</td><td>어드민 페이지 (별도 격리)</td></tr>
+    <tr><td>개발팀</td><td>코드 변경, 스키마 변경, 룰 가중치 변경</td><td>PR + 회귀 baseline 비교</td></tr>
+  </tbody>
+</table>
+
+<p>사용자에게 "지금 갱신" 버튼을 주지 않는다. 이유:</p>
+<ul>
+  <li>데이터 갱신 책임의 경계 명확화. 데이터 신선도는 운영팀 책임.</li>
+  <li>주 1회 갱신으로 충분한 빈도 (§9.2).</li>
+  <li>사용자가 직접 트리거 시 결과가 거의 변하지 않음 → 사용자 혼란.</li>
+</ul>
+
+<h3>9.4 데이터 기준일 표기 (의무)</h3>
+
+<p>대시보드 헤더 또는 KPI 영역에 1줄 표시:</p>
+
+<pre>데이터 기준일: 2026-04-29 (4일 전)</pre>
+
+<p>7일 이상 경과 시 노란 경고, 21일 이상 시 빨간 경고. <code>/api/v2/meta</code> 엔드포인트가 cutoff + freshness_days + stale_warning 을 제공한다. 임계값의 정량 근거는 발주 빈도(일 1.50건, §7.3) 기반이다.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>경과일</th>
+      <th class="num">누락 발주 (산술)</th>
+      <th>임계 결정</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>7일</td><td class="num">≈ 10.5건</td><td>특정 prefix4 단위 누락 ≈ 1건 — 노란 경고로 운영팀에 알림</td></tr>
+    <tr><td>14일</td><td class="num">≈ 21건</td><td>의사결정 신뢰도 점진 저하 — 갱신 요청 권장</td></tr>
+    <tr><td><b>21일</b></td><td class="num">≈ 31.5건</td><td><b>빨간 경고</b> — 의사결정 신뢰 임계 (전체 발주의 6% 누락)</td></tr>
+    <tr><td>30일</td><td class="num">≈ 45건</td><td>운영 사용 보류 권장 — 데이터 신선화 완료 전까지 의사결정 보류</td></tr>
+  </tbody>
+</table>
+
+<h3>9.5 배포 단계 (Phase)</h3>
+
+<div class="phase-grid">
+  <div class="phase-box">
+    <div class="phase-h">Phase 1 — PoC (현재)</div>
+    <div class="phase-sub">로컬 cron / launchd</div>
+    <ul>
+      <li>운영자 macOS에서 launchd</li>
+      <li>로컬 PostgreSQL</li>
+      <li>운영자 PC 꺼지면 멈춤 (시범만 OK)</li>
+    </ul>
+  </div>
+  <div class="phase-box">
+    <div class="phase-h">Phase 2 — 시범사업</div>
+    <div class="phase-sub">클라우드 VM</div>
+    <ul>
+      <li>작은 EC2/Lightsail (월 5~10$)</li>
+      <li>crontab + PostgreSQL 동일 인스턴스</li>
+      <li>공무원이 외부 URL 접속</li>
+    </ul>
+  </div>
+  <div class="phase-box">
+    <div class="phase-h">Phase 3 — 정식 도입</div>
+    <div class="phase-sub">환경공단 내부 인프라</div>
+    <ul>
+      <li>Airflow (Dataset 트리거)</li>
+      <li>사내망만 접속</li>
+      <li>운영팀 어드민 페이지 분리</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="s10">10. 한계와 Phase 로드맵</h2>
+
+<h3>10.1 후속 작업 우선순위</h3>
+
+<table>
+  <thead>
+    <tr><th style="width:14%">우선순위</th><th style="width:28%">작업</th><th>설명</th><th style="width:18%">출처</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="bad">🔴 즉시</span></td>
+      <td>UI SR 라벨 분리</td>
+      <td>"SR 인증 1건" → "여성 CEO (자동판별)" / "외부 인증" 분리 표기. 컴포넌트 props 1단계만 추가 (코드 수정 없이 가능). 정책 의무비율 보고 신뢰도 회복.</td>
+      <td>DA §7.1</td>
+    </tr>
+    <tr>
+      <td><span class="bad">🔴 즉시</span></td>
+      <td>sr_diversity 정책 재검토</td>
+      <td>자동판별 단독을 정책 가산점에서 분리할지, 부분 가중(0.3) 적용할지 운영팀 결정.</td>
+      <td>DA §5.3.2</td>
+    </tr>
+    <tr>
+      <td><span style="color:#d97706;font-weight:700;">🟠 단기</span></td>
+      <td>가격 회귀 모델 도입</td>
+      <td>LGBM Regressor + quantile (Q25/Q50/Q75). <code>_make_expected_price</code> 한 함수 교체. 예산 비례 한계 해소 후 카드에 가격 재노출. 선결: 신뢰구간 폭 임계 정의 (원점수 확률 비공개 원칙과 충돌 방지).</td>
+      <td>DS §6</td>
+    </tr>
+    <tr>
+      <td><span style="color:#d97706;font-weight:700;">🟠 단기</span></td>
+      <td>키워드 사전 확장</td>
+      <td>분기별 5~10개 추가 (3010 / 3912 / 2410 / 1214 영역 → 25% 미커버 점진 해소).</td>
+      <td>DA §7.6</td>
+    </tr>
+    <tr>
+      <td><span style="color:#d97706;font-weight:700;">🟠 단기</span></td>
+      <td>입찰 참여자수 분포 EDA</td>
+      <td><code>stg_opening_result</code> 참여자 컬럼 기반 SQL 검증. §7.2 의 "median 4명" 수치 출처 정정 또는 제거.</td>
+      <td>Critic §5.5</td>
+    </tr>
+    <tr>
+      <td><span style="color:#ca8a04;font-weight:700;">🟡 중기 (1)</span></td>
+      <td><b>공고-후 추천 모드 신설</b></td>
+      <td>실제 공고 게시 후 LGBM Ranker로 후보 정렬. <code>ml_score</code> 필드 채움 + 등급 표시. <b>외부 의존성 없음 + 학습 자산 보유</b> → SR API 보다 우선.</td>
+      <td>DS §5-2</td>
+    </tr>
+    <tr>
+      <td><span style="color:#ca8a04;font-weight:700;">🟡 중기 (2)</span></td>
+      <td>SR 외부 인증서 API 연계</td>
+      <td>공공구매 인증서 API → <code>mart_company_sr</code> 에 <code>female_real_certified</code> 컬럼 추가 (스키마 변경 게이트 + 외부 API 합의 일정 의존성).</td>
+      <td>DA §5.3.3</td>
+    </tr>
+    <tr>
+      <td><span style="color:#ca8a04;font-weight:700;">🟡 중기 (3)</span></td>
+      <td>풀-크기별 동적 SR 가중치</td>
+      <td>풀 ≥10 → 0.30, &lt;10 → 0.40 시범 운영 후 정량 효과 검증. magnitude 의 풀-크기 의존성 (§5) 활용.</td>
+      <td>DS §3-2</td>
+    </tr>
+    <tr>
+      <td><span class="good">🟢 장기</span></td>
+      <td>운영 피드백 로그 → 가중치 학습</td>
+      <td>사용자 클릭/선택 라벨 수집 → 메타-ranker로 4축 가중치 학습. 6개월 단위 재학습.</td>
+      <td>DS §6.6</td>
+    </tr>
+    <tr>
+      <td><span class="good">🟢 장기</span></td>
+      <td>region_code 정규화 점검</td>
+      <td>22% null 해소. <code>main_dtil_prdct_cd</code> null 39% 도 함께 점검 (§7.8). 권역 가중치 / cold-start 도입 전제.</td>
+      <td>DA §7.8</td>
+    </tr>
+    <tr>
+      <td><span class="good">🟢 장기</span></td>
+      <td>부정당제재 데이터 확보</td>
+      <td>외부 API 또는 별도 데이터 소스 확보 시 risk 등급 정밀화. 현재는 1순위 탈락 이력 + 활동중단으로 대체.</td>
+      <td>CLAUDE.md §11</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>10.2 보존하되 운영에 안 쓰는 자산</h3>
+
+<ul>
+  <li><b>UMAP + HDBSCAN 클러스터링</b> — 코드와 산출물 보존, 운영 경로에서는 제외 (§6).</li>
+  <li><b>LGBM Classifier + Ranker 학습 모델</b> — 사전탐색 모드 미사용. Phase 2 교체 지점로 보존.</li>
+  <li><b>entropy 보조 KPI</b> — 실험 후 운영 해석 어려워 제거. 분석 보고서 측 신호로만 보존.</li>
+</ul>
+
+<h3>10.3 운영상 시사점</h3>
+
+<ul>
+  <li>모든 룰 가중치는 휴리스틱이며 데이터 calibration 부재.</li>
+  <li>학습 positive 449건은 deep model에 빈약 — LGBM이 현 데이터 규모의 합리적 선택.</li>
+  <li>가격 예측은 룰베이스 산식으로 구조적 한계 — 회귀 모델 도입 전까지 카드에서 가격 표시 제거.</li>
+  <li>여성 CEO 자동판별의 SR 인플레이션은 단순 UI 라벨링 수정으로 완전 해결되지 않음 — 외부 API 연계가 진짜 해결.</li>
+</ul>
+
+<div class="footnote">
+  <b>관련 산출물</b><br/>
+  코드: <code>pipeline/ranker.py</code>, <code>pipeline/recommend_v2.py</code>, <code>pipeline/item_keywords.py</code>, <code>api/main.py</code><br/>
+  ML 자산: <code>artifacts/lgbm_baseline.txt</code>, <code>artifacts/lgbm_ranker.txt</code>, <code>artifacts/metrics*.json</code>, <code>artifacts/feature_importance*.csv</code><br/>
+  클러스터링 자산(archival): <code>artifacts/clustering_*.{json,csv,pkl}</code>, <code>pipeline/clustering.py</code><br/>
+  EDA 출처: PostgreSQL <code>eco</code> DB — <code>mart_company_master</code>, <code>mart_company_sr</code>, <code>mart_item_supply</code>, <code>stg_award</code>, <code>stg_bid_notice</code>, <code>stg_opening_result</code><br/>
+  세부 분석 보고: <code>.omc/research/ds_ml_report.md</code> (DS, 199줄), <code>.omc/research/da_eda_report.md</code> (DA, 358줄)<br/>
+  운영 가이드: <code>CLAUDE.md</code> §7 (도메인), §9 (금지사항), §10 (진행 상황), §11 (운영 추천 스펙), §12 (데이터 운영 모델), §13 (ML 로드맵)
+</div>
+
+</main>
+</body>
+</html>

@@ -293,35 +293,43 @@ uv run python scripts/check_g2b_api.py
 
 ---
 
-## 10. 진행 상황 (2026-05-06)
+## 10. 진행 상황 (2026-05-17)
 
 ### 완료
 - [x] G2B API 4개 (14/1/5/9번) 수집 + raw 적재
 - [x] PostgreSQL 스키마 (`sql/init.sql`, `sql/2026-05-05_*.sql`)
 - [x] stg_* / mart_* 마트 빌드 (`build_stg.py`)
 - [x] mart_features_at_bid (PIT 피처) — 343,019 rows
-- [x] LGBM Classifier 학습 (prefix_warm pool, AUC 0.858, HR@5 41%, SR@5 8.3%)
-- [x] LGBM Ranker 비교 학습 (lambdarank)
-- [x] FastAPI v1 (`/api/items`, `/api/recommend`, `/api/company`, `/api/kpi`)
-- [x] React 대시보드 v0.1 (item_code 단위)
-- [x] 사전탐색 모드 v2 목업 (`analysis/dashboard_mockup.html`)
-- [x] `pipeline/item_keywords.py` (8개 키워드 → prefix4 + name_regex)
+- [x] LGBM Classifier 학습 (prefix_warm pool, AUC 0.858, HR@5 41%, SR@5 8.3%) — 운영 미사용 (archival)
+- [x] LGBM Ranker 학습 (lambdarank, HR@5 0.77, NDCG@5 0.62) — Phase 2 교체 후보로 보존
+- [x] FastAPI v2 (`/api/v2/recommend`, `/api/v2/keywords`, `/api/v2/meta`)
+- [x] `api/schemas.py` v2 스키마 (cluster/entropy 필드 제거 완료)
+- [x] React 대시보드 v0.1 (item_code 단위) + v2 (사전탐색)
+- [x] `pipeline/item_keywords.py` (8 키워드 → prefix4 + name_regex, env-corp 발주의 75% 커버)
+- [x] **`pipeline/ranker.py` — RuleRanker (4축 가중합 + SR floor demote)** — sr 이진화, cluster 보정 제거
+- [x] **`pipeline/recommend_v2.py` — retrieve → rank → enrich** (cluster lookup 제거)
+- [x] 데이터 기준일 표기 (`/api/v2/meta` + 헤더)
+- [x] KNN cold-start narrative (장애인기업 ↔ 환경공단 풀)
+- [x] **종합 보고서** (`analysis/final_report.html`) — 워크플로우/점수/EDA/ML/운영 모델 통합
+- [x] 클러스터링 운영 경로 제거 (`pipeline/archive/` 보존). 사유: §13 / final_report §6
 
-### 진행 중 (사전탐색 모드 — 룰베이스 (A))
-- [ ] `pipeline/ranker.py` — Ranker Protocol + RuleRanker (Stage 2 swap point)
-- [ ] `pipeline/recommend_v2.py` — retrieve(Stage 1) → rank(Stage 2) → enrich
-- [ ] `api/main.py` 엔드포인트 (`/api/v2/recommend`, `/api/v2/keywords`, `/api/v2/meta`)
-- [ ] `api/schemas.py` v2 스키마
-- [ ] React v2 레이아웃 (입력 폼 + KPI + 카드 6항목 + 시각화 2개)
-- [ ] 데이터 기준일 표기 (헤더)
+### 정리 — 운영 경로에서 빠진 자산 (보존)
+- `pipeline/archive/clustering.py`, `cluster_groups.py`
+- `scripts/archive/train_clustering.py`, `clustering_report.py`, `dump_recommend_baseline.py`
+- `artifacts/archive/clustering_*.{pkl,csv,json}`
+- 가격 표시(`expected_price`) — UI 카드에서 제거. 룰베이스 산식의 예산 비례 한계 (보고서 §10.1 🟠)
+- entropy 보조 KPI — 운영 해석 어려워 통째 제거
 
 ### 향후 (Phase 2 / v3)
-- (B) 추천시스템 본격화 — Stage 2를 LGBM 으로 교체 (synthetic bid)
-- Stage 1 정교화 — AutoEncoder/Two-Tower BRN 임베딩
-- 부정당제재 데이터 소스 확보
-- 자동화 Phase 2 (클라우드 VM + crontab)
-- streamlit `app/` 정리 (제거 또는 어드민 격리)
-- 키워드 free-text 매핑 (8개 제약 해제)
+- 🟠 가격 회귀 모델 (LGBM Regressor + quantile) — `_make_expected_price` 한 함수 교체
+- 🟠 키워드 사전 분기별 5~10개 확장 (3010/3912/2410/1214 영역)
+- 🟡 공고-후 추천 모드 신설 — LGBM Ranker 교체 지점 (외부 의존성 없어 SR API보다 우선)
+- 🟡 SR 외부 인증서 API 연계 — `mart_company_sr` `female_real_certified` 컬럼 (스키마 변경 게이트)
+- 🟡 풀-크기별 동적 SR 가중치 시범
+- 🟢 운영 피드백 로그 → 메타-ranker 가중치 학습 (6개월 누적 후)
+- 🟢 region_code / main_dtil_prdct_cd null 정규화 점검
+- 🟢 부정당제재 데이터 소스 확보
+- 🟢 자동화 Phase 2 (클라우드 VM + crontab)
 
 ---
 

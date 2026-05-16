@@ -90,7 +90,6 @@ export interface KpiV2 {
   avg_expected_price_million: number | null
   supply_risk: string
   contract_recommend: string
-  pool_entropy: number | null
 }
 
 export interface ComplianceInfo {
@@ -125,8 +124,6 @@ export interface RecommendationV2Item {
   ml_score: number | null
   score_used: string
   reason: string
-  cluster_label: string | null
-  cluster_id: number | null
   knn_similar_brn: string | null
   knn_similar_corp_name: string | null
   knn_similarity: number | null

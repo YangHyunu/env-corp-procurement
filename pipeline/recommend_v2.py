@@ -41,10 +41,9 @@ from api.schemas import (
     SummaryStatsV2,
     SupplyStability,
 )
-from pipeline.cluster_groups import DORMANT, NOISE, label_to_group
 from pipeline.item_keywords import KeywordFilter, resolve as resolve_keyword
 from pipeline.policy import SR_LEGAL_FLOOR_PCT
-from pipeline.ranker import Ranker, RuleRanker, compute_pool_entropy
+from pipeline.ranker import Ranker, RuleRanker
 
 load_dotenv(find_dotenv(usecwd=True))
 DEFAULT_DSN = os.environ.get("DATABASE_URL", "postgresql:///eco")
@@ -52,54 +51,9 @@ DEFAULT_DSN = os.environ.get("DATABASE_URL", "postgresql:///eco")
 logger = logging.getLogger(__name__)
 
 
-# ── Clustering / K-NN artifact paths (운영 산출물 — 카드 narrative 보조용) ──
+# ── K-NN cold-start artifact (장애인기업 narrative 보강용) ──
 ARTIFACTS_DIR = Path(__file__).resolve().parent.parent / "artifacts"
-CLUSTERING_PROFILES_PATH = ARTIFACTS_DIR / "clustering_profiles.json"
-CLUSTERING_ASSIGNMENTS_PATH = ARTIFACTS_DIR / "clustering_assignments.csv"
 KNN_CANDIDATES_PATH = ARTIFACTS_DIR / "disabled_knn_candidates.csv"
-
-
-@functools.lru_cache(maxsize=1)
-def _load_cluster_lookup() -> tuple[
-    dict[str, int], dict[int, str], dict[int, str | None],
-]:
-    """(brn → cid, cid → label, cid → group) 세 dict 반환.
-
-    group 은 profiles.json 의 'group' 필드 우선, 없으면 label_to_group fallback
-    (재학습 없이 기존 profiles.json 그대로 작동).
-    파일 부재 시 빈 dict 반환 (clustering 아직 학습 안 된 환경 graceful).
-    """
-    brn_to_cid: dict[str, int] = {}
-    cid_to_label: dict[int, str] = {}
-    cid_to_group: dict[int, str | None] = {}
-    if CLUSTERING_ASSIGNMENTS_PATH.exists():
-        try:
-            with open(CLUSTERING_ASSIGNMENTS_PATH, "r", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    brn = (row.get("brn") or "").strip()
-                    try:
-                        cid = int(row.get("cluster_id") or -2)
-                    except ValueError:
-                        cid = -2
-                    if brn:
-                        brn_to_cid[brn] = cid
-        except OSError as exc:
-            logger.warning("cluster assignments load failed: %s", exc)
-    if CLUSTERING_PROFILES_PATH.exists():
-        try:
-            with open(CLUSTERING_PROFILES_PATH, "r", encoding="utf-8") as f:
-                profiles = json.load(f)
-            for p in profiles:
-                cid = int(p["cluster_id"])
-                label = str(p.get("label") or "")
-                cid_to_label[cid] = label
-                # group 필드가 있으면 우선 사용, 없으면 label_to_group fallback
-                grp = p.get("group")
-                cid_to_group[cid] = grp if grp else label_to_group(label)
-        except (OSError, json.JSONDecodeError) as exc:
-            logger.warning("cluster profiles load failed: %s", exc)
-    return brn_to_cid, cid_to_label, cid_to_group
 
 
 @functools.lru_cache(maxsize=1)
@@ -137,17 +91,12 @@ def _load_knn_lookup() -> dict[str, dict[str, Any]]:
     return out
 
 
-def _is_cold_or_dormant(c: dict, group: str | None) -> bool:
-    """BRN이 cold-start거나 dormant인지 — K-NN 보강 트리거 조건.
+def _is_cold_or_dormant(c: dict) -> bool:
+    """BRN이 cold-start인지 — K-NN narrative 보강 트리거 조건.
 
-    group: cluster_groups enum (DORMANT/NOISE 면 보강 대상).
+    환경공단 낙찰 이력이 없는 BRN(env_count == 0) 만 보강 대상.
     """
-    env_count = int(c.get("award_count") or 0)
-    if env_count == 0:
-        return True
-    if group in (DORMANT, NOISE):
-        return True
-    return False
+    return int(c.get("award_count") or 0) == 0
 
 
 # ── Domain thresholds (CLAUDE.md §11 리스크 등급 4단계 표와 동기화) ──────
@@ -266,11 +215,8 @@ def retrieve(
 # ── Stage 2: Rank ───────────────────────────────────────────────────
 def rank(
     candidates: list[dict], context: dict, ranker: Optional[Ranker] = None,
-    cluster_groups: dict[str, str] | None = None,
 ) -> list[dict]:
-    return (ranker or RuleRanker()).score(
-        candidates, context, cluster_groups=cluster_groups,
-    )
+    return (ranker or RuleRanker()).score(candidates, context)
 
 
 # ── Enrich helpers (all take conn) ──────────────────────────────────
@@ -723,7 +669,7 @@ def _make_charts(dist: dict) -> dict:
 
 @dataclass
 class CardContext:
-    """단일 카드 조립용 컨텍스트 — _build_recommendation_item 시그니처 정리 (US-004).
+    """단일 카드 조립용 컨텍스트.
 
     enrich() 가 BRN별로 조립해 _build_recommendation_item 에 전달.
     DB 의존성 X — pure dataclass.
@@ -736,25 +682,17 @@ class CardContext:
     risk_signals: dict
     awards: list[dict]
     precedents: list[dict]
-    cluster_id: int | None = None
-    cluster_label: str | None = None
     knn_ref: dict[str, Any] | None = None
 
 
 def _build_recommendation_item(
     rank_pos: int, c: dict, ctx: CardContext,
 ) -> RecommendationV2Item:
-    """단일 카드 조립 — Pydantic 모델 직접 반환 (compile-time 계약).
-
-    ctx: CardContext — BRN별로 조립된 dist/market/risk/awards/precedents/cluster/knn.
-    """
+    """단일 카드 조립 — Pydantic 모델 직접 반환 (compile-time 계약)."""
     brn = c["brn"]
     risk_info = _make_risk_info(c.get("last_award_at"), ctx.risk_signals)
     reason_text = _reason(c, ctx.market.get("mean"))
-    # cluster_label 한 줄 narrative append (UI 표시는 label 그대로 — 분기만 group)
-    if ctx.cluster_label:
-        reason_text = f"{reason_text} · 클러스터: {ctx.cluster_label}"
-    # K-NN 보조 narrative
+    # K-NN 보조 narrative (cold-start BRN 만)
     knn_brn = knn_corp = None
     knn_sim = None
     if ctx.knn_ref:
@@ -789,8 +727,6 @@ def _build_recommendation_item(
         axes=c["axes"],
         ml_score=None,
         score_used=str(c.get("score_used") or "rule"),
-        cluster_id=ctx.cluster_id,
-        cluster_label=ctx.cluster_label,
         knn_similar_brn=knn_brn,
         knn_similar_corp_name=knn_corp,
         knn_similarity=knn_sim,
@@ -816,17 +752,13 @@ def enrich(
     awards = _brn_recent_awards(conn, brns)
     precedents = _precedents(conn, kf.prefix4, kf.name_regex, budget_won)
 
-    # 클러스터링 + K-NN 산출물 로드 (lru_cache — 매 요청 reload X)
-    brn_to_cid, cid_to_label, cid_to_group = _load_cluster_lookup()
+    # K-NN cold-start 산출물 로드 (lru_cache — 매 요청 reload X)
     knn_lookup = _load_knn_lookup()
 
     items: list[RecommendationV2Item] = []
     for rank_pos, c in enumerate(top_k, 1):
         brn = c["brn"]
-        cid = brn_to_cid.get(brn)
-        label = cid_to_label.get(cid) if cid is not None else None
-        group = cid_to_group.get(cid) if cid is not None else None
-        knn_ref = knn_lookup.get(brn) if _is_cold_or_dormant(c, group) else None
+        knn_ref = knn_lookup.get(brn) if _is_cold_or_dormant(c) else None
         ctx = CardContext(
             budget_won=budget_won,
             market=market,
@@ -836,8 +768,6 @@ def enrich(
             risk_signals=risks.get(brn, {}),
             awards=awards.get(brn, []),
             precedents=precedents,
-            cluster_id=cid,
-            cluster_label=label,
             knn_ref=knn_ref,
         )
         items.append(_build_recommendation_item(rank_pos, c, ctx))
@@ -887,10 +817,6 @@ def compute_kpi(
               if t.expected_price.point_million is not None]
     avg_price_million = (sum(prices) // len(prices)) if prices else None
 
-    # D1.A — 후보 풀 4축 결합 분포의 entropy (보조 KPI, 점수·랭킹 영향 X).
-    # candidates 는 rank() 결과(axes 포함 dict) 가 들어와야 한다 — 호출부 책임.
-    pool_entropy = compute_pool_entropy(candidates)
-
     return KpiV2(
         pool_size=pool,
         market_depth=MarketDepth(registered=registered, env_active=pool),
@@ -899,7 +825,6 @@ def compute_kpi(
         avg_expected_price_million=avg_price_million,
         supply_risk=_supply_risk(pool),
         contract_recommend=_contract_recommend(pool),
-        pool_entropy=pool_entropy,
     )
 
 
@@ -943,19 +868,9 @@ def recommend(req: RecommendV2Request, dsn: str = DEFAULT_DSN) -> RecommendV2Res
                 meta={"warning": "후보 0건 — 정책 필터 완화 권유"},
             )
 
-        # 클러스터 그룹 → BRN별 가중치 보정에 사용 (없으면 default)
-        brn_to_cid, _cid_to_label, cid_to_group = _load_cluster_lookup()
-        cluster_groups_for_rank: dict[str, str] = {
-            c["brn"]: cid_to_group[brn_to_cid[c["brn"]]]
-            for c in candidates
-            if c["brn"] in brn_to_cid
-            and brn_to_cid[c["brn"]] in cid_to_group
-            and cid_to_group[brn_to_cid[c["brn"]]] is not None
-        }
         scored = rank(
             candidates,
             context={"budget_million": req.budget_million_won},
-            cluster_groups=cluster_groups_for_rank or None,
         )
         sorted_scored = sorted(scored, key=lambda x: x["rule_score"], reverse=True)
         top_k = sorted_scored[: req.top_k]

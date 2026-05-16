@@ -1,31 +1,6 @@
 import type { RecommendationV2Item } from '@/lib/types'
 import { SrBadge, TierBadge } from '@/lib/badges'
 
-// 가격 신뢰도 등급 — n_samples / is_extrapolated 기반
-function PriceConfidenceBadge({ n, isExtrapolated }: { n: number; isExtrapolated: boolean }) {
-  let stars: string
-  let label: string | null = null
-
-  if (isExtrapolated) {
-    stars = '★'          // ★
-    label = '시장평균 추정'
-  } else if (n >= 3) {
-    stars = '★★★' // ★★★
-  } else {
-    stars = '★★'    // ★★
-    label = `참고용 (n=${n})`
-  }
-
-  return (
-    <div style={{ marginTop: 2, fontSize: 9.5, lineHeight: 1.2 }}>
-      <span style={{ color: '#fbbf24', letterSpacing: '-0.03em' }}>{stars}</span>
-      {label && (
-        <span style={{ color: '#9ca3af', marginLeft: 3, fontWeight: 400 }}>{label}</span>
-      )}
-    </div>
-  )
-}
-
 interface Props {
   item: RecommendationV2Item
   selected: boolean
@@ -44,7 +19,6 @@ export function RecommendationCard({
   onToggleCompare,
 }: Props) {
   const stats = item.summary_stats
-  const price = item.expected_price
   const tier = item.tier
 
   const cardBorder = selected
@@ -178,51 +152,29 @@ export function RecommendationCard({
         )}
       </div>
 
-      {/* 우측 가격/점수 */}
+      {/* 우측 점수 */}
       <div style={{ textAlign: 'right' }}>
-        {/* 가격 숫자 + 신뢰도 등급 */}
         <div
           style={{
-            fontSize: 14,
-            fontWeight: 800,
+            fontSize: 13,
+            color: '#475569',
+            fontWeight: 600,
             fontVariantNumeric: 'tabular-nums',
-            letterSpacing: '-0.02em',
+            letterSpacing: '-0.01em',
           }}
         >
-          {price.point_million.toLocaleString()}
-          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 500, marginLeft: 1 }}>
-            백만
+          종합점수
+          <span
+            style={{
+              fontSize: 16,
+              fontWeight: 800,
+              color: '#0f172a',
+              marginLeft: 6,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            {item.rule_score.toFixed(2)}
           </span>
-        </div>
-        {/* 신뢰도 별 등급 */}
-        <PriceConfidenceBadge n={price.n_samples} isExtrapolated={price.is_extrapolated ?? false} />
-        {/* 시장가 분위수 — 3필드 모두 non-null 일 때만 표시 */}
-        {price.market_q25_million != null &&
-          price.market_q50_million != null &&
-          price.market_q75_million != null && (
-            <div
-              style={{
-                fontSize: 9.5,
-                color: '#94a3b8',
-                marginTop: 2,
-                fontStyle: 'italic',
-                fontVariantNumeric: 'tabular-nums',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              시장가: {price.market_q25_million}~{price.market_q75_million}M (중앙 {price.market_q50_million}M)
-            </div>
-          )}
-        <div
-          style={{
-            fontSize: 10,
-            color: '#94a3b8',
-            marginTop: 3,
-            fontWeight: 500,
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          종합점수 {item.rule_score.toFixed(2)}
         </div>
       </div>
     </div>

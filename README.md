@@ -80,7 +80,15 @@ psql -U postgres -d <db_name> -f sql/init.sql
 
 ## 진행 상황
 
-MVP 1사이클 진행 중. 자세한 단계는 [`CLAUDE.md` § 10](./CLAUDE.md#10-현재-진행-상황-mvp-단계) 참조.
+MVP 사전탐색 모드 v2 동작 중 (룰베이스 4축 가중합 + SR floor + KNN cold-start narrative).
+세부 작업 진행은 [`CLAUDE.md` § 10](./CLAUDE.md#10-진행-상황-2026-05-17) 참조.
+
+## 보고서
+
+| 산출물 | 위치 | 내용 |
+|---|---|---|
+| **종합 보고서** | [`analysis/final_report.html`](./analysis/final_report.html) | 워크플로우 · 점수 산출 · 데이터·ML 핵심 발견 · 운영 모델 · Phase 로드맵 |
+| Archival | [`analysis/archive/`](./analysis/archive/) | 이전 EDA·클러스터링·방법론 보고서 (보존) |
 
 ## 라이선스 / 데이터 출처
 
