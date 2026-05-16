@@ -39,7 +39,7 @@ from api.schemas import (
 )
 from pipeline.item_keywords import KeywordFilter, resolve as resolve_keyword
 from pipeline.policy import SR_LEGAL_FLOOR_PCT
-from pipeline.ranker import Ranker, RuleRanker
+from pipeline.ranker import Ranker, RuleRanker, compute_pool_entropy
 
 load_dotenv(find_dotenv(usecwd=True))
 DEFAULT_DSN = os.environ.get("DATABASE_URL", "postgresql:///eco")
@@ -704,6 +704,10 @@ def compute_kpi(
               if t.expected_price.point_million is not None]
     avg_price_million = (sum(prices) // len(prices)) if prices else None
 
+    # D1.A — 후보 풀 4축 결합 분포의 entropy (보조 KPI, 점수·랭킹 영향 X).
+    # candidates 는 rank() 결과(axes 포함 dict) 가 들어와야 한다 — 호출부 책임.
+    pool_entropy = compute_pool_entropy(candidates)
+
     return KpiV2(
         pool_size=pool,
         market_depth=MarketDepth(registered=registered, env_active=pool),
@@ -712,6 +716,7 @@ def compute_kpi(
         avg_expected_price_million=avg_price_million,
         supply_risk=_supply_risk(pool),
         contract_recommend=_contract_recommend(pool),
+        pool_entropy=pool_entropy,
     )
 
 

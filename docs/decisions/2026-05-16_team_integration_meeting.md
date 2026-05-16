@@ -145,10 +145,10 @@ CLAUDE.md §13 에 "보류 (Phase 3 장기)" 로 결정됨. 사유: 데이터 �
 
 | ID | 채택 옵션 | 사유 (1줄) | 후속 PR 책임자 | 데드라인 |
 |---|---|---|---|---|
-| D1 | | | | |
-| D2 | | | | |
-| D3 | | | | |
-| D4 | | | | |
+| D1 | A | entropy 는 보조 KPI 로만, 점수·랭킹 영향 X | YangHyunu | 2026-05-16 |
+| D2 | A | CLAUDE.md §13 보류 결정 유지, Phase 3 임베딩과 함께 재논의 | — | — |
+| D3 | A | 팀원 ranker 변형은 별도 PR 로 review, 본 브랜치 base 유지 | 팀원 | TBD |
+| D4 | 별도 PR | 가중치 변경 절차는 CLAUDE.md 별도 PR 로 후속 처리 | YangHyunu | TBD |
 
 ---
 

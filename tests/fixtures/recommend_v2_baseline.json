@@ -1,0 +1,953 @@
+{
+  "대기오염 측정장비__600M": {
+    "compliance": {
+      "obligation_met": true,
+      "sr_in_top_k": 5,
+      "sr_pct_top_k": 100.0
+    },
+    "item_keyword": "대기오염 측정장비",
+    "kpi": {
+      "contract_recommend": "일반경쟁",
+      "pool_size": 103,
+      "sr_count": 25,
+      "sr_pct": 24.3,
+      "supply_risk": "낮음"
+    },
+    "matched_prefix4": [
+      "4111"
+    ],
+    "recommendations": [
+      {
+        "axes": {
+          "price_competitiveness": 0.8058252427184466,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.8058252427184466,
+          "track_record": 0.444502
+        },
+        "badges": [
+          "중소기업",
+          "부산",
+          "여성기업"
+        ],
+        "brn": "4544300562",
+        "corp_name": "시소커뮤니케이션",
+        "ml_score": null,
+        "rank": 1,
+        "rule_score": 0.5320561016181229,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.9223300970873787,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.6990291262135923,
+          "track_record": 0.402
+        },
+        "badges": [
+          "중소기업",
+          "강원",
+          "여성기업"
+        ],
+        "brn": "2228124130",
+        "corp_name": "대진정보통신 주식회사",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.5265870550161813,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.912621359223301,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.6990291262135923,
+          "track_record": 0.402
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "5341402018",
+        "corp_name": "이서환경",
+        "ml_score": null,
+        "rank": 3,
+        "rule_score": 0.5246453074433657,
+        "score_used": "rule",
+        "tier": "C"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.5631067961165048,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.883495145631068,
+          "track_record": 0.540937
+        },
+        "badges": [
+          "중소기업",
+          "부산",
+          "여성기업"
+        ],
+        "brn": "6098178075",
+        "corp_name": "더펜상사주식회사",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.5240933977346278,
+        "score_used": "rule",
+        "tier": "C"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.06796116504854366,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.9902912621359223,
+          "track_record": 0.788267
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "8338700207",
+        "corp_name": "케이앤제이엔지니어링주식회사",
+        "ml_score": null,
+        "rank": 5,
+        "rule_score": 0.5152826889967637,
+        "score_used": "rule",
+        "tier": "B"
+      }
+    ]
+  },
+  "바이오가스 발전기__2000M": {
+    "compliance": {
+      "obligation_met": true,
+      "sr_in_top_k": 1,
+      "sr_pct_top_k": 20.0
+    },
+    "item_keyword": "바이오가스 발전기",
+    "kpi": {
+      "contract_recommend": "일반경쟁",
+      "pool_size": 12,
+      "sr_count": 1,
+      "sr_pct": 8.3,
+      "supply_risk": "낮음"
+    },
+    "matched_prefix4": [
+      "2611"
+    ],
+    "recommendations": [
+      {
+        "axes": {
+          "price_competitiveness": 0.0,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 1.0,
+          "track_record": 0.999773
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "1138630217",
+        "corp_name": "주식회사 스마트파워",
+        "ml_score": null,
+        "rank": 1,
+        "rule_score": 0.5665985666666666,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.9166666666666666,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.8333333333333334,
+          "track_record": 0.51
+        },
+        "badges": [
+          "중소기업",
+          "전북"
+        ],
+        "brn": "4028160218",
+        "corp_name": "주식회사 디엠티",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.4613333333333334,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.8333333333333334,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.8333333333333334,
+          "track_record": 0.507712
+        },
+        "badges": [
+          "중소기업",
+          "서울"
+        ],
+        "brn": "1078654247",
+        "corp_name": "주식회사 제이씨",
+        "ml_score": null,
+        "rank": 3,
+        "rule_score": 0.44398026666666673,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.5,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.9166666666666666,
+          "track_record": 0.6600280000000001
+        },
+        "badges": [
+          "중소기업",
+          "전북"
+        ],
+        "brn": "4028164121",
+        "corp_name": "(주) 대경산전",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.4355084,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.75,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.8333333333333334,
+          "track_record": 0.5031720000000001
+        },
+        "badges": [
+          "중소기업",
+          "전라남"
+        ],
+        "brn": "4168114765",
+        "corp_name": "(주)썬테크",
+        "ml_score": null,
+        "rank": 5,
+        "rule_score": 0.42595160000000004,
+        "score_used": "rule",
+        "tier": "B"
+      }
+    ]
+  },
+  "소각로 내화벽돌__500M": {
+    "compliance": {
+      "obligation_met": false,
+      "sr_in_top_k": 0,
+      "sr_pct_top_k": 0.0
+    },
+    "item_keyword": "소각로 내화벽돌",
+    "kpi": {
+      "contract_recommend": "제한경쟁",
+      "pool_size": 5,
+      "sr_count": 0,
+      "sr_pct": 0.0,
+      "supply_risk": "보통"
+    },
+    "matched_prefix4": [
+      "4710",
+      "4010"
+    ],
+    "recommendations": [
+      {
+        "axes": {
+          "price_competitiveness": 0.0,
+          "sr_diversity": 0.0,
+          "supply_stability": 1.0,
+          "track_record": 0.9990186666666667
+        },
+        "badges": [
+          "중소기업",
+          "인천"
+        ],
+        "brn": "1318178005",
+        "corp_name": "주식회사 대경에스코",
+        "ml_score": null,
+        "rank": 1,
+        "rule_score": 0.44970560000000004,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.8,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.8,
+          "track_record": 0.552096
+        },
+        "badges": [
+          "중소기업",
+          "충청북"
+        ],
+        "brn": "1308102064",
+        "corp_name": "주식회사 부-스타",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.44562880000000005,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.6,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.8,
+          "track_record": 0.540252
+        },
+        "badges": [
+          "중소기업",
+          "경상북"
+        ],
+        "brn": "5048115950",
+        "corp_name": "대림로얄이앤피(주)",
+        "ml_score": null,
+        "rank": 3,
+        "rule_score": 0.4020756,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.4,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.8,
+          "track_record": 0.553024
+        },
+        "badges": [
+          "중소기업",
+          "경기도"
+        ],
+        "brn": "1378114708",
+        "corp_name": "신한열기 주식회사",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.3659072,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.19999999999999996,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.8,
+          "track_record": 0.599828
+        },
+        "badges": [
+          "중소기업",
+          "경상남"
+        ],
+        "brn": "6068194528",
+        "corp_name": "주식회사 한국종합플랜트",
+        "ml_score": null,
+        "rank": 5,
+        "rule_score": 0.3399484,
+        "score_used": "rule",
+        "tier": "B"
+      }
+    ]
+  },
+  "수질측정센서__300M": {
+    "compliance": {
+      "obligation_met": true,
+      "sr_in_top_k": 5,
+      "sr_pct_top_k": 100.0
+    },
+    "item_keyword": "수질측정센서",
+    "kpi": {
+      "contract_recommend": "일반경쟁",
+      "pool_size": 80,
+      "sr_count": 22,
+      "sr_pct": 27.5,
+      "supply_risk": "낮음"
+    },
+    "matched_prefix4": [
+      "4110",
+      "4111",
+      "4617"
+    ],
+    "recommendations": [
+      {
+        "axes": {
+          "price_competitiveness": 0.9875,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.675,
+          "track_record": 0.37600000000000006
+        },
+        "badges": [
+          "중소기업",
+          "충청북",
+          "여성기업"
+        ],
+        "brn": "3018175382",
+        "corp_name": "정현전력주식회사",
+        "ml_score": null,
+        "rank": 1,
+        "rule_score": 0.5282166666666667,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.975,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.675,
+          "track_record": 0.37604800000000005
+        },
+        "badges": [
+          "중소기업",
+          "인천",
+          "여성기업"
+        ],
+        "brn": "3062772879",
+        "corp_name": "유민상사",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.5257310666666666,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.775,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.8625,
+          "track_record": 0.40192200000000006
+        },
+        "badges": [
+          "중소기업",
+          "전라남",
+          "장애인기업"
+        ],
+        "brn": "4100198936",
+        "corp_name": "태산 ENG",
+        "ml_score": null,
+        "rank": 3,
+        "rule_score": 0.5216182666666667,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.7625,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.8625,
+          "track_record": 0.4
+        },
+        "badges": [
+          "중소기업",
+          "서울",
+          "여성기업"
+        ],
+        "brn": "2893001481",
+        "corp_name": "서온상사",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.5185416666666667,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.8375,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.675,
+          "track_record": 0.37600000000000006
+        },
+        "badges": [
+          "중소기업",
+          "인천",
+          "여성기업"
+        ],
+        "brn": "6147100487",
+        "corp_name": "다은컴퍼니",
+        "ml_score": null,
+        "rank": 5,
+        "rule_score": 0.49821666666666664,
+        "score_used": "rule",
+        "tier": "B"
+      }
+    ]
+  },
+  "슬러지 탈수기__1200M": {
+    "compliance": {
+      "obligation_met": true,
+      "sr_in_top_k": 3,
+      "sr_pct_top_k": 60.0
+    },
+    "item_keyword": "슬러지 탈수기",
+    "kpi": {
+      "contract_recommend": "일반경쟁",
+      "pool_size": 15,
+      "sr_count": 3,
+      "sr_pct": 20.0,
+      "supply_risk": "낮음"
+    },
+    "matched_prefix4": [
+      "4710"
+    ],
+    "recommendations": [
+      {
+        "axes": {
+          "price_competitiveness": 0.6,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.8666666666666667,
+          "track_record": 0.6578846666666667
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "1258197083",
+        "corp_name": "주식회사 이앤에프",
+        "ml_score": null,
+        "rank": 1,
+        "rule_score": 0.5640320666666666,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.4666666666666667,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.7333333333333333,
+          "track_record": 0.5093053333333333
+        },
+        "badges": [
+          "중소기업",
+          "강원",
+          "여성기업"
+        ],
+        "brn": "2258110334",
+        "corp_name": "광명기전(주)",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.4727915999999999,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.19999999999999996,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.4,
+          "track_record": 0.46623466666666663
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "1238132745",
+        "corp_name": "주식회사 홍우엔지니어링",
+        "ml_score": null,
+        "rank": 3,
+        "rule_score": 0.35653706666666657,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.9333333333333333,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.7333333333333333,
+          "track_record": 0.4858733333333334
+        },
+        "badges": [
+          "중소기업",
+          "충청남"
+        ],
+        "brn": "3068117034",
+        "corp_name": "주식회사 티에스엔텍",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.0,
+        "score_used": "rule",
+        "tier": "C"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.1333333333333333,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.7333333333333333,
+          "track_record": 0.5326893333333333
+        },
+        "badges": [
+          "중소기업",
+          "경기도"
+        ],
+        "brn": "1248148385",
+        "corp_name": "주식회사 이화에코시스템",
+        "ml_score": null,
+        "rank": 5,
+        "rule_score": 0.0,
+        "score_used": "rule",
+        "tier": "C"
+      }
+    ]
+  },
+  "폐수처리약품__400M": {
+    "compliance": {
+      "obligation_met": true,
+      "sr_in_top_k": 5,
+      "sr_pct_top_k": 100.0
+    },
+    "item_keyword": "폐수처리약품",
+    "kpi": {
+      "contract_recommend": "일반경쟁",
+      "pool_size": 22,
+      "sr_count": 9,
+      "sr_pct": 40.9,
+      "supply_risk": "낮음"
+    },
+    "matched_prefix4": [
+      "4710",
+      "2411"
+    ],
+    "recommendations": [
+      {
+        "axes": {
+          "price_competitiveness": 0.9090909090909091,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.9090909090909091,
+          "track_record": 0.5683913142857143
+        },
+        "badges": [
+          "중소기업",
+          "경상북",
+          "장애인기업"
+        ],
+        "brn": "5148161543",
+        "corp_name": "주식회사 에이스엔지니어링",
+        "ml_score": null,
+        "rank": 1,
+        "rule_score": 0.6053658791341991,
+        "score_used": "rule",
+        "tier": "A"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.6818181818181819,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.6363636363636364,
+          "track_record": 0.47770828571428575
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "5503201432",
+        "corp_name": "지온테크",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.4917973341991342,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.7272727272727273,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.6363636363636364,
+          "track_record": 0.43817028571428573
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "5508702203",
+        "corp_name": "주식회사 웰스테크",
+        "ml_score": null,
+        "rank": 3,
+        "rule_score": 0.4890268432900433,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.9545454545454546,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.3181818181818182,
+          "track_record": 0.4428571428571429
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "5438101257",
+        "corp_name": "주식회사 와이제이엔텍",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.4881601731601731,
+        "score_used": "rule",
+        "tier": "C"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.09090909090909094,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.9545454545454546,
+          "track_record": 0.6776377142857144
+        },
+        "badges": [
+          "중소기업",
+          "강원",
+          "여성기업"
+        ],
+        "brn": "4598700203",
+        "corp_name": "(주)태연테크",
+        "ml_score": null,
+        "rank": 5,
+        "rule_score": 0.4813216173160173,
+        "score_used": "rule",
+        "tier": "B"
+      }
+    ]
+  },
+  "하수처리용 펌프__800M": {
+    "compliance": {
+      "obligation_met": true,
+      "sr_in_top_k": 5,
+      "sr_pct_top_k": 100.0
+    },
+    "item_keyword": "하수처리용 펌프",
+    "kpi": {
+      "contract_recommend": "일반경쟁",
+      "pool_size": 115,
+      "sr_count": 41,
+      "sr_pct": 35.7,
+      "supply_risk": "낮음"
+    },
+    "matched_prefix4": [
+      "4015"
+    ],
+    "recommendations": [
+      {
+        "axes": {
+          "price_competitiveness": 0.6347826086956522,
+          "sr_diversity": 1.0,
+          "supply_stability": 0.4782608695652174,
+          "track_record": 0.4066134545454546
+        },
+        "badges": [
+          "중소기업",
+          "경상남",
+          "여성기업",
+          "장애인기업",
+          "사회적기업"
+        ],
+        "brn": "6098197499",
+        "corp_name": "주식회사 한마음",
+        "ml_score": null,
+        "rank": 1,
+        "rule_score": 0.6706796885375494,
+        "score_used": "rule",
+        "tier": "A"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.30434782608695654,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.991304347826087,
+          "track_record": 0.9242653454545454
+        },
+        "badges": [
+          "중소기업",
+          "충청북",
+          "장애인기업"
+        ],
+        "brn": "7728601563",
+        "corp_name": "더블유아이엠주식회사",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.6035114876943346,
+        "score_used": "rule",
+        "tier": "A"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.6521739130434783,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.9565217391304348,
+          "track_record": 0.6991833939393939
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "1308686787",
+        "corp_name": "성광수중펌프 주식회사",
+        "ml_score": null,
+        "rank": 3,
+        "rule_score": 0.6003347283267457,
+        "score_used": "rule",
+        "tier": "A"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.9565217391304348,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.8173913043478261,
+          "track_record": 0.533945696969697
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "1408148640",
+        "corp_name": "주식회사 서광부스타이엔지",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.5907634192358366,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.4347826086956522,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 0.9739130434782609,
+          "track_record": 0.7491621818181817
+        },
+        "badges": [
+          "중소기업",
+          "강원",
+          "여성기업"
+        ],
+        "brn": "6848101091",
+        "corp_name": "주식회사 청림",
+        "ml_score": null,
+        "rank": 5,
+        "rule_score": 0.5744587994729907,
+        "score_used": "rule",
+        "tier": "B"
+      }
+    ]
+  },
+  "활성탄 필터__250M": {
+    "compliance": {
+      "obligation_met": true,
+      "sr_in_top_k": 1,
+      "sr_pct_top_k": 20.0
+    },
+    "item_keyword": "활성탄 필터",
+    "kpi": {
+      "contract_recommend": "일반경쟁",
+      "pool_size": 15,
+      "sr_count": 1,
+      "sr_pct": 6.7,
+      "supply_risk": "낮음"
+    },
+    "matched_prefix4": [
+      "4710"
+    ],
+    "recommendations": [
+      {
+        "axes": {
+          "price_competitiveness": 0.19999999999999996,
+          "sr_diversity": 0.3333333333333333,
+          "supply_stability": 1.0,
+          "track_record": 0.9985626666666667
+        },
+        "badges": [
+          "중소기업",
+          "경기도",
+          "여성기업"
+        ],
+        "brn": "1298106639",
+        "corp_name": "(주)대성그린테크",
+        "ml_score": null,
+        "rank": 1,
+        "rule_score": 0.6062354666666667,
+        "score_used": "rule",
+        "tier": "A"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.4666666666666667,
+          "sr_diversity": 0.0,
+          "supply_stability": 1.0,
+          "track_record": 0.9524093333333333
+        },
+        "badges": [
+          "중소기업",
+          "강원"
+        ],
+        "brn": "1138132812",
+        "corp_name": "원웅엔지니어링 주식회사",
+        "ml_score": null,
+        "rank": 2,
+        "rule_score": 0.5290561333333333,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.8,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.8666666666666667,
+          "track_record": 0.7523599999999999
+        },
+        "badges": [
+          "중소기업",
+          "충청남"
+        ],
+        "brn": "4158601447",
+        "corp_name": "주식회사 대하산업",
+        "ml_score": null,
+        "rank": 3,
+        "rule_score": 0.515708,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.9333333333333333,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.6666666666666666,
+          "track_record": 0.595996
+        },
+        "badges": [
+          "대기업",
+          "서울"
+        ],
+        "brn": "1758801164",
+        "corp_name": "효성화학(주)",
+        "ml_score": null,
+        "rank": 4,
+        "rule_score": 0.46546546666666666,
+        "score_used": "rule",
+        "tier": "B"
+      },
+      {
+        "axes": {
+          "price_competitiveness": 0.8666666666666667,
+          "sr_diversity": 0.0,
+          "supply_stability": 0.6666666666666666,
+          "track_record": 0.552576
+        },
+        "badges": [
+          "중소기업",
+          "대구"
+        ],
+        "brn": "5028616531",
+        "corp_name": "기림환경산업 주식회사",
+        "ml_score": null,
+        "rank": 5,
+        "rule_score": 0.4391061333333333,
+        "score_used": "rule",
+        "tier": "B"
+      }
+    ]
+  }
+}

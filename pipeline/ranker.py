@@ -131,3 +131,74 @@ class RuleRanker:
                 "is_sr_demoted": bool(row["is_sr_demoted"]),
             })
         return out
+
+
+# ── 보조 KPI: 후보 풀 분산도 (D1 옵션 A) ────────────────────────────
+_ENTROPY_AXES: tuple[str, ...] = (
+    "supply_stability",
+    "sr_diversity",
+    "track_record",
+    "price_competitiveness",
+)
+
+
+def compute_pool_entropy(candidates: list[dict[str, Any]]) -> float | None:
+    """후보 풀의 4축 점수 결합 분포 Shannon entropy (0~1 정규화).
+
+    D1 옵션 A — 점수·랭킹·tier 에 절대 영향 X. 순수 분석 함수.
+
+    동작:
+      - 후보 < 2 → None (의미 없음)
+      - 분산 0 축은 자동 skip (uniform 축은 entropy 기여 X)
+      - 결합 분포 = 4축 점수 행렬(n × k)을 평탄화해 단일 확률 분포로 정규화
+      - max_entropy = log(n × k) 로 정규화 (0~1)
+      - 모든 축이 분산 0 또는 합 0 이면 None (degenerate pool)
+
+    Args:
+      candidates: `RuleRanker.score()` 결과 dict 리스트 (`axes` 키 포함).
+
+    Returns:
+      0.0 ~ 1.0 float, 또는 None (계산 불가).
+    """
+    if not candidates or len(candidates) < 2:
+        return None
+
+    # 4축 행렬 추출 (shape: n × len(axes_used))
+    axis_cols: list[np.ndarray] = []
+    for axis_name in _ENTROPY_AXES:
+        col = np.array(
+            [float(c.get("axes", {}).get(axis_name, 0.0)) for c in candidates],
+            dtype=float,
+        )
+        # 분산 0 축은 skip — entropy 기여 X
+        if col.std() > 1e-9:
+            axis_cols.append(col)
+
+    if not axis_cols:
+        return None
+
+    matrix = np.column_stack(axis_cols)  # shape (n, k)
+    n = matrix.shape[0]
+    k = matrix.shape[1]
+
+    # 결합 분포: matrix 전체를 평탄화해 단일 확률 분포로 정규화.
+    # 이 방식은 (i) 축 간 점수 차이 + (ii) 후보 간 점수 차이를 모두 반영한다.
+    # 모든 셀이 동일 값이면 max entropy (= log(n*k)) → 정규화값 1.0
+    # 모든 mass 가 한 셀에 몰리면 entropy 0 → 정규화값 0.0
+    flat = matrix.flatten().astype(float)
+    total = flat.sum()
+    if total <= 0:
+        return None
+    probs = flat / total
+    probs = probs[probs > 1e-12]
+    if probs.size < 2:
+        return None
+
+    # Shannon entropy (자연 로그)
+    entropy_val = float(-np.sum(probs * np.log(probs)))
+    # 정규화: max = log(n × k) — 모든 셀 uniform 일 때의 entropy
+    max_entropy = float(np.log(n * k))
+    if max_entropy <= 0:
+        return None
+
+    return round(min(max(entropy_val / max_entropy, 0.0), 1.0), 4)

@@ -86,6 +86,7 @@ export interface KpiV2 {
   avg_expected_price_million: number | null
   supply_risk: string
   contract_recommend: string
+  pool_entropy: number | null
 }
 
 export interface ComplianceInfo {
