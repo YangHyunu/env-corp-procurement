@@ -3,9 +3,15 @@ Pure-logic tests for pipeline.recommend_v2 — no DB, no network.
 
 Run:
   uv run python -m unittest tests.test_recommend_v2_pure -v
+
+baseline 회귀 테스트 (TestRecommendBaselineRegression) 는 DB + fixture 두 가지가
+모두 있을 때만 실행된다. fixture 생성:
+  uv run python scripts/dump_recommend_baseline.py
 """
 from __future__ import annotations
 
+import json
+import os
 import sys
 import unittest
 from datetime import date, datetime, timedelta
@@ -190,6 +196,59 @@ class TestPrecedentConstants(unittest.TestCase):
     def test_brackets_make_sense(self):
         self.assertLess(PRECEDENT_BUDGET_LO, 1.0)
         self.assertGreater(PRECEDENT_BUDGET_HI, 1.0)
+
+
+FIXTURE_PATH = (
+    Path(__file__).resolve().parent / "fixtures" / "recommend_v2_baseline.json"
+)
+
+
+def _db_available() -> bool:
+    """psycopg2.connect 가 즉시 성공하는지만 확인. 통합 PR 의 점수·랭킹 회귀 검출용."""
+    try:
+        import psycopg2
+        dsn = os.environ.get("DATABASE_URL", "postgresql:///eco")
+        conn = psycopg2.connect(dsn, connect_timeout=2)
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+
+@unittest.skipUnless(
+    FIXTURE_PATH.exists() and _db_available(),
+    "baseline fixture 또는 DB 부재 — scripts/dump_recommend_baseline.py 로 fixture 생성 후 재실행",
+)
+class TestRecommendBaselineRegression(unittest.TestCase):
+    """회귀 baseline — 통합 PR(D1.B / D3.B / D3.C) 에서 점수·랭킹·tier 변화 검출."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from scripts.dump_recommend_baseline import (  # noqa: E402
+            CASES, SR_FILTER_NO, _snapshot_response,
+        )
+        from pipeline.recommend_v2 import RecommendV2Request, recommend  # noqa: E402
+        cls._cases = CASES
+        cls._sr = SR_FILTER_NO
+        cls._snapshot = _snapshot_response
+        cls._recommend = staticmethod(recommend)
+        cls._req_cls = RecommendV2Request
+        cls._baseline = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+
+    def test_recommend_v2_matches_baseline(self):
+        for keyword, budget_million in self._cases:
+            with self.subTest(keyword=keyword, budget=budget_million):
+                key = f"{keyword}__{budget_million}M"
+                expected = self._baseline.get(key)
+                self.assertIsNotNone(expected, f"baseline 누락: {key}")
+                req = self._req_cls(
+                    item_keyword=keyword,
+                    budget_million_won=budget_million,
+                    sr_filter=self._sr,
+                    top_k=5,
+                )
+                actual = self._snapshot(self._recommend(req))
+                self.assertEqual(actual, expected)
 
 
 if __name__ == "__main__":

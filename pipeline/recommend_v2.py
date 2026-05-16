@@ -44,7 +44,7 @@ from api.schemas import (
 from pipeline.cluster_groups import DORMANT, NOISE, label_to_group
 from pipeline.item_keywords import KeywordFilter, resolve as resolve_keyword
 from pipeline.policy import SR_LEGAL_FLOOR_PCT
-from pipeline.ranker import Ranker, RuleRanker
+from pipeline.ranker import Ranker, RuleRanker, compute_pool_entropy
 
 load_dotenv(find_dotenv(usecwd=True))
 DEFAULT_DSN = os.environ.get("DATABASE_URL", "postgresql:///eco")
@@ -586,6 +586,9 @@ def _make_expected_price(
     is_extrapolated=True: BRN 유사 규모 거래 부재 시 — 운영자에게 신뢰도 낮음 알림.
 
     [Phase 향후 swap point — 회귀 모델 도입 시 이 함수만 교체]
+    (D3.B / regressor 도입 시 본 함수만 교체. 호출부는 enrich() 의 한 곳.
+     반환 dict 키 — point/q25/q75/sigma_pp/market_diff_pp/n_samples/is_extrapolated —
+     은 ExpectedPrice 스키마 계약이므로 유지.)
     """
     n_scale = int(dist_at_scale.get("n") or 0)
     n_full = int(dist.get("n") or 0)
@@ -863,6 +866,10 @@ def compute_kpi(
               if t.expected_price.point_million is not None]
     avg_price_million = (sum(prices) // len(prices)) if prices else None
 
+    # D1.A — 후보 풀 4축 결합 분포의 entropy (보조 KPI, 점수·랭킹 영향 X).
+    # candidates 는 rank() 결과(axes 포함 dict) 가 들어와야 한다 — 호출부 책임.
+    pool_entropy = compute_pool_entropy(candidates)
+
     return KpiV2(
         pool_size=pool,
         market_depth=MarketDepth(registered=registered, env_active=pool),
@@ -871,6 +878,7 @@ def compute_kpi(
         avg_expected_price_million=avg_price_million,
         supply_risk=_supply_risk(pool),
         contract_recommend=_contract_recommend(pool),
+        pool_entropy=pool_entropy,
     )
 
 

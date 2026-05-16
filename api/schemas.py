@@ -192,6 +192,7 @@ class KpiV2(BaseModel):
     avg_expected_price_million: int | None = None
     supply_risk: str                 # 낮음/보통/높음
     contract_recommend: str          # 수의계약/제한경쟁/일반경쟁
+    pool_entropy: float | None = None  # D1.A — 후보 4축 결합 분포 분산도 (0~1, 보조 KPI)
 
 
 class ComplianceInfo(BaseModel):

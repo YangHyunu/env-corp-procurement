@@ -63,6 +63,28 @@ export function KpiGrid({ kpi, budgetMillion }: Props) {
         value={<span style={{ fontSize: 14 }}>{kpi.contract_recommend}</span>}
         delta={`후보 ${kpi.pool_size} · 공급위험 ${kpi.supply_risk}`}
       />
+      <div style={{ gridColumn: '1 / -1' }}>
+        <KpiCard
+          label="후보 분산도"
+          tooltip="후보 풀의 4축 점수 분산도 (0~1). 낮으면 후보들이 비슷해서 차별화가 어렵습니다. 점수·랭킹에는 영향 없음 (보조 KPI)."
+          value={
+            kpi.pool_entropy != null ? (
+              kpi.pool_entropy.toFixed(2)
+            ) : (
+              '—'
+            )
+          }
+          delta={
+            kpi.pool_entropy != null
+              ? kpi.pool_entropy < 0.4
+                ? '분산 낮음 — 차별화 어려움'
+                : kpi.pool_entropy < 0.7
+                ? '분산 보통'
+                : '분산 높음 — 후보 차이 뚜렷'
+              : '데이터 부족'
+          }
+        />
+      </div>
     </div>
   )
 }
@@ -71,20 +93,23 @@ function KpiCard({
   label,
   value,
   delta,
+  tooltip,
 }: {
   label: string
   value: React.ReactNode
   delta: string
+  tooltip?: string
 }) {
   return (
     <div
+      title={tooltip}
       style={{
         background: '#fff',
         borderRadius: 10,
         padding: '12px 14px',
         boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.05)',
         transition: 'box-shadow 0.2s',
-        cursor: 'default',
+        cursor: tooltip ? 'help' : 'default',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.boxShadow =
