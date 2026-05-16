@@ -480,6 +480,9 @@ def _make_expected_price(
     is_extrapolated=True: BRN 유사 규모 거래 부재 시 — 운영자에게 신뢰도 낮음 알림.
 
     [Phase 향후 swap point — 회귀 모델 도입 시 이 함수만 교체]
+    (D3.B / regressor 도입 시 본 함수만 교체. 호출부는 enrich() 의 한 곳.
+     반환 dict 키 — point/q25/q75/sigma_pp/market_diff_pp/n_samples/is_extrapolated —
+     은 ExpectedPrice 스키마 계약이므로 유지.)
     """
     n_scale = int(dist_at_scale.get("n") or 0)
     n_full = int(dist.get("n") or 0)

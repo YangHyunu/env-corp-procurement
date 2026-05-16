@@ -7,6 +7,11 @@ Ranker Protocol + 구현체 — Stage 2 (Rank) swap point.
 candidates 는 dict list. 필수 키:
   brn, sr_count, female_ceo_flag, disabled_corp_flag, social_corp_flag,
   award_count, award_total_amt, avg_bid_rate
+
+회의 결정 영향 (docs/decisions/2026-05-16_team_integration_meeting.md):
+  - D1.A (entropy = 보조 KPI) → 본 모듈에 `compute_pool_entropy` 함수만 추가
+  - D1.B (entropy = 가중치 보정) → `RuleRanker.__init__` 시그니처 변경 + 가중치 동적 조정
+  - D3.B (LGBMRanker swap) → 신규 `LGBMRanker` 클래스 추가, `Ranker` Protocol 그대로 구현
 """
 from __future__ import annotations
 

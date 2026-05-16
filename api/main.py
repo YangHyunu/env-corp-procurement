@@ -257,7 +257,7 @@ def kpi(item_code: str) -> KpiResponse:
         item_name=item_name,
         matched_count=int(pool["pool"]),
         sr_coverage_pct=sr_pct,
-        cluster_count=None,        # MVP 스텁
+        cluster_count=None,        # MVP 스텁 — D2 결정 시 채움 (docs/decisions/2026-05-16_team_integration_meeting.md)
         recommend_threshold_pct=rec_pct,
     )
 
