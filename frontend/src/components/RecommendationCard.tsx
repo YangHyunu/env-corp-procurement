@@ -146,21 +146,6 @@ export function RecommendationCard({
           {item.badges.map((b) => (
             <SrBadge key={b} label={b} />
           ))}
-          {item.cluster_label != null && (
-            <span
-              style={{
-                fontSize: 9,
-                padding: '2px 7px',
-                borderRadius: 5,
-                fontWeight: 700,
-                letterSpacing: '0.01em',
-                background: '#e0f2fe',
-                color: '#0369a1',
-              }}
-            >
-              {item.cluster_label}
-            </span>
-          )}
         </div>
 
         {/* 메타 */}
