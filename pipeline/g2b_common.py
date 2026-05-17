@@ -30,13 +30,17 @@ KST = ZoneInfo("Asia/Seoul")
 
 
 # ── 환경 ────────────────────────────────────────────────
-try:
-    SERVICE_KEY = os.environ["G2B_SERVICE_KEY"]
-except KeyError:
-    raise RuntimeError(
-        "G2B_SERVICE_KEY 환경변수가 설정되지 않았습니다.\n"
-        ".env 파일을 만들고 G2B_SERVICE_KEY=발급받은_Decoding_키 형태로 작성하세요."
-    )
+# G2B 키는 ingest 호출 시점에만 필요 (운영 API 부팅에는 불필요).
+# module-level 강제 체크 X — make_g2b_request 안에서 lazy 확인.
+def _get_service_key() -> str:
+    key = os.environ.get("G2B_SERVICE_KEY")
+    if not key:
+        raise RuntimeError(
+            "G2B_SERVICE_KEY 환경변수가 설정되지 않았습니다.\n"
+            "로컬: .env 에 G2B_SERVICE_KEY=발급받은_Decoding_키\n"
+            "Railway/Render: Variables 탭에 동일 이름으로 추가"
+        )
+    return key
 
 BASE_URL = "http://apis.data.go.kr/1230000"
 
@@ -163,7 +167,7 @@ def call(
     """
     session = session or make_session()
     url = f"{BASE_URL}/{operation_path}"
-    full_params = {"ServiceKey": SERVICE_KEY, **params}
+    full_params = {"ServiceKey": _get_service_key(), **params}
 
     r = session.get(url, params=full_params, timeout=timeout)
     r.raise_for_status()
