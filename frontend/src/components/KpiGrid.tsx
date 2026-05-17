@@ -55,7 +55,7 @@ export function KpiGrid({ kpi, budgetMillion }: Props) {
         }
         delta={
           avgPrice != null
-            ? `예산 ${budgetMillion.toLocaleString()} × ${avgRate?.toFixed(1) ?? '—'}% ≈ ${avgPrice.toLocaleString()}만원`
+            ? `예산 ${budgetMillion.toLocaleString()}만원 × ${avgRate?.toFixed(1) ?? '—'}% ≈ ${avgPrice.toLocaleString()}만원`
             : '—'
         }
       />
