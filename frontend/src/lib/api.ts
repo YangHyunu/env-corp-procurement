@@ -4,7 +4,7 @@ import type {
   RecommendV2Response,
 } from './types'
 
-const BASE = 'http://localhost:8000'
+const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 
 async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {

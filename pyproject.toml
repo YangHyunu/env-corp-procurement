@@ -6,21 +6,24 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 authors = []
 
-# ── 핵심 의존성 (수집·정제) ─────────────────────────────
+# ── 핵심 의존성 (수집·정제 + 운영 API) ─────────────────
+# API 서버 deps 도 여기에 포함 (Railway 등 PaaS 자동 install 대응)
 dependencies = [
     "requests>=2.31",
     "python-dotenv>=1.0",
     "pandas>=2.2",
     "psycopg2-binary>=2.9",
     "sqlalchemy>=2.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "pydantic>=2.5",
 ]
 
 # ── 단계별 추가 의존성 ──────────────────────────────────
 # 사용 예:
-#   uv sync                       # 핵심만
+#   uv sync                       # 핵심 + API (운영 기본)
 #   uv sync --extra analysis      # 분석 단계 진입 시
 #   uv sync --extra ml            # ML 모델링 시
-#   uv sync --extra api           # FastAPI 도입 시
 #   uv sync --all-extras          # 전부 (개발 환경)
 [project.optional-dependencies]
 analysis = [
@@ -33,11 +36,6 @@ ml = [
     "umap-learn>=0.5",
     "hdbscan>=0.8",
     "lightgbm>=4.5",
-]
-api = [
-    "fastapi>=0.110",
-    "uvicorn[standard]>=0.27",
-    "pydantic>=2.5",
 ]
 app = [
     "streamlit>=1.40",

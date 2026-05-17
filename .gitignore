@@ -26,7 +26,9 @@ data/dumps/
 .brooks-lint-history.json
 
 # 학습 산출물 (재학습 가능 — 대용량)
-artifacts/
+artifacts/*
+# 단, KNN cold-start narrative는 런타임 의존이라 git 포함
+!artifacts/disabled_knn_candidates.csv
 
 # 분석 캐시 / 생성물 (재생성 가능)
 analysis/notebooks.zip
