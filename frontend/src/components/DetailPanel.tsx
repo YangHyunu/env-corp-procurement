@@ -9,11 +9,12 @@ import { ActionBar } from './ActionBar'
 interface Props {
   item: RecommendationV2Item | null
   kpi: KpiV2 | null
+  budgetMillion: number
   onAddToCompare: () => void
   inCompare: boolean
 }
 
-export function DetailPanel({ item, kpi, onAddToCompare, inCompare }: Props) {
+export function DetailPanel({ item, kpi, budgetMillion, onAddToCompare, inCompare }: Props) {
   if (!item) {
     return (
       <aside
@@ -126,7 +127,7 @@ export function DetailPanel({ item, kpi, onAddToCompare, inCompare }: Props) {
 
         {/* 예상 가격 */}
         <DetailSection>
-          <PriceBar price={item.expected_price} kpi={kpi} />
+          <PriceBar price={item.expected_price} kpi={kpi} budgetMillion={budgetMillion} />
         </DetailSection>
 
         {/* 위험요인 + 공급안정성 */}

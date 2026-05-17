@@ -9,9 +9,10 @@ export function KpiGrid({ kpi, budgetMillion }: Props) {
   if (!kpi) return null
 
   const avgPrice = kpi.avg_expected_price_million
-  const budgetDiff =
+  // 평균 예상 낙찰률 — avg_expected_price_million / budgetMillion * 100
+  const avgRate =
     avgPrice != null && budgetMillion > 0
-      ? ((avgPrice - budgetMillion) / budgetMillion) * 100
+      ? (avgPrice / budgetMillion) * 100
       : null
 
   return (
@@ -41,20 +42,20 @@ export function KpiGrid({ kpi, budgetMillion }: Props) {
         delta={`SR 보유 ${kpi.sr_count}개`}
       />
       <KpiCard
-        label="평균 예상가"
+        label="평균 예상 낙찰률"
         value={
-          avgPrice != null ? (
+          avgRate != null ? (
             <>
-              {avgPrice.toLocaleString()}
-              <span style={{ fontSize: 10, fontWeight: 500, color: '#6b7280' }}>만원</span>
+              {avgRate.toFixed(1)}
+              <span style={{ fontSize: 10, fontWeight: 500, color: '#6b7280' }}>%</span>
             </>
           ) : (
             '—'
           )
         }
         delta={
-          budgetDiff != null
-            ? `예산 대비 ${budgetDiff >= 0 ? '+' : ''}${budgetDiff.toFixed(0)}%`
+          avgPrice != null
+            ? `예산 ${budgetMillion.toLocaleString()} × ${avgRate?.toFixed(1) ?? '—'}% ≈ ${avgPrice.toLocaleString()}만원`
             : '—'
         }
       />

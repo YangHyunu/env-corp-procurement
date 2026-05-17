@@ -3,26 +3,37 @@ import type { ExpectedPrice, KpiV2 } from '@/lib/types'
 interface Props {
   price: ExpectedPrice
   kpi: KpiV2 | null
+  budgetMillion: number
 }
 
-export function PriceBar({ price, kpi }: Props) {
+export function PriceBar({ price, kpi, budgetMillion }: Props) {
   const {
     point_million, q25_million, q75_million,
     n_samples, n_samples_overall, sigma_pp, market_diff_pp,
     is_extrapolated,
   } = price
-  const marketAvg = kpi?.avg_expected_price_million ?? null
+  const marketAvgMillion = kpi?.avg_expected_price_million ?? null
 
   const hasIQR = n_samples >= 3 && q25_million != null && q75_million != null
   const isExtrapolated = !!is_extrapolated
   const isSparse = !hasIQR && !isExtrapolated
 
-  // Determine axis range
-  const values = [point_million, q25_million, q75_million, marketAvg].filter(
+  // ── 가격 → 낙찰률 역산 (budget 알면 가능) ─────────────────
+  const canDeriveRate = budgetMillion > 0
+  const pointRate = canDeriveRate ? (point_million / budgetMillion) * 100 : null
+  const q25Rate = canDeriveRate && q25_million != null
+    ? (q25_million / budgetMillion) * 100 : null
+  const q75Rate = canDeriveRate && q75_million != null
+    ? (q75_million / budgetMillion) * 100 : null
+  const marketRate = canDeriveRate && marketAvgMillion != null
+    ? (marketAvgMillion / budgetMillion) * 100 : null
+
+  // 막대 축 범위 — 낙찰률 75~100 기본, 데이터 범위가 더 넓으면 확장
+  const rateValues = [pointRate, q25Rate, q75Rate, marketRate].filter(
     (v): v is number => v != null,
   )
-  const minVal = Math.min(...values) * 0.92
-  const maxVal = Math.max(...values) * 1.08
+  const minVal = rateValues.length ? Math.min(75, Math.floor(Math.min(...rateValues) - 2)) : 75
+  const maxVal = rateValues.length ? Math.max(100, Math.ceil(Math.max(...rateValues) + 2)) : 100
   const range = maxVal - minVal || 1
 
   function pct(v: number) {
@@ -51,9 +62,8 @@ export function PriceBar({ price, kpi }: Props) {
             margin: 0,
           }}
         >
-          예상 가격
+          예상 낙찰률
         </h3>
-        {/* 표본 / 외삽 안내 배지 */}
         <span
           style={{
             fontSize: 10,
@@ -77,8 +87,27 @@ export function PriceBar({ price, kpi }: Props) {
         </span>
       </div>
 
+      {/* 메인 숫자: 점추정 낙찰률 */}
+      <div
+        style={{
+          fontSize: 26,
+          fontWeight: 800,
+          letterSpacing: '-0.02em',
+          color: '#0f172a',
+          marginBottom: 4,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {pointRate != null ? `${pointRate.toFixed(1)}%` : '—'}
+      </div>
+      {hasIQR && q25Rate != null && q75Rate != null && (
+        <div style={{ fontSize: 11, color: '#64748b', marginBottom: 14, fontWeight: 500 }}>
+          구간(50%) {q25Rate.toFixed(1)}~{q75Rate.toFixed(1)}%
+        </div>
+      )}
+
+      {/* 막대 — 낙찰률 축 */}
       <div style={{ padding: '6px 0 8px' }}>
-        {/* 축 */}
         <div
           style={{
             display: 'flex',
@@ -92,11 +121,10 @@ export function PriceBar({ price, kpi }: Props) {
           }}
         >
           {axisPoints.map((v, i) => (
-            <span key={i}>{Math.round(v)}</span>
+            <span key={i}>{v.toFixed(0)}%</span>
           ))}
         </div>
 
-        {/* 막대 */}
         <div
           style={{
             background: isSparse ? '#f8fafc' : '#f1f5f9',
@@ -107,14 +135,14 @@ export function PriceBar({ price, kpi }: Props) {
             opacity: isSparse ? 0.6 : 1,
           }}
         >
-          {/* IQR 구간 — n>=3 일 때만 */}
-          {hasIQR && (
+          {/* IQR */}
+          {hasIQR && q25Rate != null && q75Rate != null && (
             <div
               style={{
                 position: 'absolute',
                 height: 16,
-                left: pct(q25_million!),
-                width: `${((q75_million! - q25_million!) / range) * 100}%`,
+                left: pct(q25Rate),
+                width: `${((q75Rate - q25Rate) / range) * 100}%`,
                 background: 'linear-gradient(180deg, #93c5fd 0%, #60a5fa 100%)',
                 borderRadius: 8,
                 boxShadow: '0 1px 2px rgba(59,130,246,0.3)',
@@ -123,16 +151,15 @@ export function PriceBar({ price, kpi }: Props) {
           )}
 
           {/* 시장 평균 마커 */}
-          {marketAvg != null && (
+          {marketRate != null && (
             <div
               style={{
                 position: 'absolute',
                 top: -5,
                 bottom: -5,
                 width: 2,
-                left: pct(marketAvg),
+                left: pct(marketRate),
                 background: '#ef4444',
-                opacity: 1,
               }}
             >
               <span
@@ -151,15 +178,15 @@ export function PriceBar({ price, kpi }: Props) {
             </div>
           )}
 
-          {/* 이 업체 — n>=3: 굵은 라인(중앙값) / n<3: 큼지막한 dot */}
-          {hasIQR ? (
+          {/* 이 업체 */}
+          {pointRate != null && (hasIQR ? (
             <div
               style={{
                 position: 'absolute',
                 top: -3,
                 bottom: -3,
                 width: 3,
-                left: pct(point_million),
+                left: pct(pointRate),
                 background: '#1e3a8a',
                 borderRadius: 2,
                 boxShadow: '0 0 0 1px rgba(255,255,255,0.7)',
@@ -184,14 +211,13 @@ export function PriceBar({ price, kpi }: Props) {
               style={{
                 position: 'absolute',
                 top: '50%',
-                left: pct(point_million),
+                left: pct(pointRate),
                 transform: 'translate(-50%, -50%)',
                 width: 18,
                 height: 18,
                 borderRadius: '50%',
                 background: '#1e3a8a',
                 boxShadow: '0 0 0 3px rgba(30,58,138,0.18), 0 2px 4px rgba(0,0,0,0.15)',
-                opacity: 1,
                 zIndex: 2,
               }}
             >
@@ -210,11 +236,11 @@ export function PriceBar({ price, kpi }: Props) {
                 이 업체
               </span>
             </div>
-          )}
+          ))}
         </div>
       </div>
 
-      {/* 통계 */}
+      {/* 보조 통계 */}
       <div
         style={{
           display: 'flex',
@@ -224,16 +250,9 @@ export function PriceBar({ price, kpi }: Props) {
           flexWrap: 'wrap',
         }}
       >
-        <StatItem label="예상가" value={`${point_million.toLocaleString()}만원`} />
-        {hasIQR && (
-          <StatItem
-            label="구간(50%)"
-            value={`${q25_million!.toLocaleString()}~${q75_million!.toLocaleString()}`}
-          />
-        )}
         {sigma_pp != null && (
           <StatItem
-            label="낙찰률 변동폭"
+            label="변동폭"
             value={`${sigma_pp < 3 ? '낮음' : sigma_pp < 6 ? '보통' : '높음'} (${sigma_pp.toFixed(1)}%p)`}
           />
         )}
@@ -245,6 +264,34 @@ export function PriceBar({ price, kpi }: Props) {
           />
         )}
       </div>
+
+      {/* 예상 가격 보조 캡션 */}
+      {pointRate != null && canDeriveRate && (
+        <div
+          style={{
+            fontSize: 11,
+            color: '#475569',
+            marginTop: 12,
+            padding: '8px 10px',
+            background: '#f8fafc',
+            borderRadius: 6,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          예산 {budgetMillion.toLocaleString()}만원 × {pointRate.toFixed(1)}% ≈{' '}
+          <b>{point_million.toLocaleString()}만원</b>
+          <div
+            style={{
+              fontSize: 10,
+              color: '#94a3b8',
+              marginTop: 4,
+              fontWeight: 500,
+            }}
+          >
+            ※ 단순 비례 추정 — 가격 회귀 모델 도입 전 임시
+          </div>
+        </div>
+      )}
 
       <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 8, fontWeight: 500 }}>
         {isExtrapolated

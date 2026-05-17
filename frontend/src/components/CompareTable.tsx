@@ -3,9 +3,10 @@ import { riskLabel } from '@/lib/utils'
 
 interface Props {
   items: RecommendationV2Item[]
+  budgetMillion: number
 }
 
-export function CompareTable({ items }: Props) {
+export function CompareTable({ items, budgetMillion }: Props) {
   if (items.length < 2) {
     return (
       <div
@@ -35,13 +36,15 @@ export function CompareTable({ items }: Props) {
   }
 
   const scores = cols.map((c) => c.rule_score)
-  const prices = cols.map((c) => c.expected_price.point_million)
+  const expectedRates = cols.map((c) =>
+    budgetMillion > 0 ? (c.expected_price.point_million / budgetMillion) * 100 : null,
+  )
   const awards = cols.map((c) => c.summary_stats.award_count)
   const rates = cols.map((c) => c.summary_stats.avg_bid_rate)
   const losts = cols.map((c) => c.summary_stats.lost_count)
 
   const bestScore = getBestIdx(scores)
-  const bestPrice = getBestIdx(prices, false)
+  const bestExpectedRate = getBestIdx(expectedRates, false)
   const bestAward = getBestIdx(awards)
   const bestRate = getBestIdx(rates)
   const bestLost = getBestIdx(losts, false)
@@ -86,15 +89,17 @@ export function CompareTable({ items }: Props) {
           </Cell>
         ))}
 
-        {/* 예상가 */}
-        <Cell label>예상가</Cell>
-        {cols.map((c, i) => (
-          <Cell key={c.brn} winner={i === bestPrice}>
-            {i === bestPrice
-              ? <b>{c.expected_price.point_million.toLocaleString()}만원</b>
-              : `${c.expected_price.point_million.toLocaleString()}만원`}
-          </Cell>
-        ))}
+        {/* 예상 낙찰률 */}
+        <Cell label>예상 낙찰률</Cell>
+        {cols.map((c, i) => {
+          const r = expectedRates[i]
+          if (r == null) return <Cell key={c.brn}>—</Cell>
+          return (
+            <Cell key={c.brn} winner={i === bestExpectedRate}>
+              {i === bestExpectedRate ? <b>{r.toFixed(1)}%</b> : `${r.toFixed(1)}%`}
+            </Cell>
+          )
+        })}
 
         {/* 낙찰 건수 */}
         <Cell label>낙찰 건수</Cell>

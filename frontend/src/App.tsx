@@ -213,12 +213,13 @@ function Dashboard() {
               overflowY: 'auto',
             }}
           >
-            <CompareTable items={compareItems} />
+            <CompareTable items={compareItems} budgetMillion={budgetMillion} />
           </aside>
         ) : (
           <DetailPanel
             item={selectedItem}
             kpi={result?.kpi ?? null}
+            budgetMillion={budgetMillion}
             onAddToCompare={() => {
               if (selectedItem) handleToggleCompare(selectedItem.brn)
             }}
