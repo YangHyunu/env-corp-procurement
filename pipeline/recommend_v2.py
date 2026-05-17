@@ -452,6 +452,19 @@ def _dormant_months(last_award_at) -> Optional[int]:
     return int(diff.days / MONTH_DAYS)
 
 
+DO_ABBREV: dict[str, str] = {
+    "충청북도": "충북",
+    "충청남도": "충남",
+    "전라북도": "전북",
+    "전라남도": "전남",
+    "경상북도": "경북",
+    "경상남도": "경남",
+    "강원도":   "강원",
+    "경기도":   "경기",
+    "제주도":   "제주",
+}
+
+
 def _badges(c: dict) -> list[str]:
     out: list[str] = []
     if c.get("corp_size"):
@@ -466,7 +479,8 @@ def _badges(c: dict) -> list[str]:
                      .replace("특별자치시", "")
                      .replace("특별자치도", "")
             )
-            out.append(short[:3] or first[:3])
+            short = DO_ABBREV.get(short, short)
+            out.append(short or first)
     if c.get("female_ceo_flag"):
         out.append("여성기업")
     if c.get("disabled_corp_flag"):

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { Settings } from 'lucide-react'
-import { useMeta } from '@/lib/hooks'
 import type { DashboardSettings } from '@/lib/types'
 import { SR_LEGAL_FLOOR_PCT, SR_TARGET_OPTIONS, TOPK_OPTIONS } from '@/lib/constants'
 
@@ -10,7 +9,6 @@ interface Props {
 }
 
 export function Header({ settings, onSaveSettings }: Props) {
-  const { data: meta } = useMeta()
   const [open, setOpen] = useState(false)
   const popRef = useRef<HTMLDivElement>(null)
 
@@ -30,11 +28,6 @@ export function Header({ settings, onSaveSettings }: Props) {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
-
-  const isStale = meta?.stale_warning ?? true
-  const freshnessText = meta
-    ? `기준일 ${meta.data_cutoff} (${meta.freshness_days}일 전)`
-    : '데이터 확인 중...'
 
   return (
     <header
@@ -61,42 +54,6 @@ export function Header({ settings, onSaveSettings }: Props) {
       </div>
 
       <div style={{ display: 'flex', gap: 14, alignItems: 'center', position: 'relative' }}>
-        {/* Freshness pill */}
-        <span
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            fontSize: 11,
-            padding: '5px 12px',
-            borderRadius: 999,
-            fontWeight: 500,
-            transition: 'background-color 0.2s',
-            background: isStale ? '#fef2f2' : '#f0fdf4',
-            color: isStale ? '#b91c1c' : '#15803d',
-            boxShadow: isStale ? 'inset 0 0 0 1px #fecaca' : 'inset 0 0 0 1px #bbf7d0',
-          }}
-        >
-          <span
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: '50%',
-              flexShrink: 0,
-              background: isStale ? '#ef4444' : '#22c55e',
-              boxShadow: isStale
-                ? '0 0 0 3px rgba(239,68,68,0.15)'
-                : '0 0 0 3px rgba(34,197,94,0.15)',
-            }}
-            className={isStale ? 'animate-pulse-dot' : ''}
-          />
-          {meta
-            ? (isStale
-              ? `데이터 갱신 지연 — ${freshnessText}`
-              : `데이터 최신 — ${freshnessText}`)
-            : '데이터 확인 중...'}
-        </span>
-
         {/* Settings button */}
         <div ref={popRef} style={{ position: 'relative' }}>
           <button
