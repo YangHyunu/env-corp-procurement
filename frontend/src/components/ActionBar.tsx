@@ -1,4 +1,4 @@
-import { FileText, Printer, GitCompare, ExternalLink } from 'lucide-react'
+import { Printer, GitCompare } from 'lucide-react'
 
 interface Props {
   onAddToCompare: () => void
@@ -16,17 +16,11 @@ export function ActionBar({ onAddToCompare, inCompare }: Props) {
         flexWrap: 'wrap',
       }}
     >
-      <ActionBtn icon={<FileText size={12} />} label="검토 메모" primary />
-      <ActionBtn icon={<Printer size={12} />} label="PDF 출력" onClick={() => window.print()} />
+      <ActionBtn icon={<Printer size={12} />} label="PDF 출력" onClick={() => window.print()} primary />
       <ActionBtn
         icon={<GitCompare size={12} />}
         label={inCompare ? '비교에서 제거' : '비교에 추가'}
         onClick={onAddToCompare}
-      />
-      <ActionBtn
-        icon={<ExternalLink size={12} />}
-        label="전체 이력"
-        style={{ marginLeft: 'auto' }}
       />
     </div>
   )

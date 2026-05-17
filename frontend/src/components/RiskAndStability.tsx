@@ -16,7 +16,7 @@ export function RiskAndStability({ risk, stability }: Props) {
     totalAmt >= 1_000_000_000
       ? `${(totalAmt / 1_000_000_000).toFixed(1)}억`
       : totalAmt >= 1_000_000
-        ? `${(totalAmt / 1_000_000).toFixed(0)}백만`
+        ? `${(totalAmt / 1_000_000).toFixed(0)}만원`
         : `${totalAmt.toLocaleString()}원`
 
   return (
@@ -70,7 +70,7 @@ export function RiskAndStability({ risk, stability }: Props) {
         {/* 공급 안정성 */}
         <div>
           <StatRow
-            label="G2B 등록"
+            label="나라장터 등록 기간"
             value={
               stability.g2b_age_years != null
                 ? `${stability.g2b_age_years.toFixed(1)}년`

@@ -7,14 +7,14 @@ export function cn(...inputs: ClassValue[]) {
 
 export function fmtMillion(n: number | null | undefined): string {
   if (n == null) return '—'
-  return `${n.toLocaleString()}백만`
+  return `${n.toLocaleString()}만원`
 }
 
 export function fmtAmt(krw: number | null | undefined): string {
   if (krw == null) return '—'
   const million = Math.round(krw / 1_000_000)
   if (million >= 1000) return `${(million / 1000).toFixed(1)}억`
-  return `${million}백만`
+  return `${million}만원`
 }
 
 export function fmtPct(v: number | null | undefined, decimals = 1): string {

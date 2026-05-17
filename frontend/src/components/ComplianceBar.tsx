@@ -53,7 +53,7 @@ export function ComplianceBar({ compliance, topK }: Props) {
         {met ? '충족' : '미충족'}
       </span>
       <span style={{ marginLeft: 'auto', fontSize: 10, color: '#9ca3af' }}>
-        서버 판정 기준
+        자동 판정
       </span>
     </div>
   )

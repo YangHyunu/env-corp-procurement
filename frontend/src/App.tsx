@@ -15,7 +15,12 @@ function Dashboard() {
   // ── 설정 (LocalStorage) ─────────────────────────────────────────
   const [srTarget, setSrTarget] = useLocalStorage('eco_sr_target', 20)
   const [topK, setTopK] = useLocalStorage('eco_top_k', 5)
-  const [budgetUnit, setBudgetUnit] = useLocalStorage('eco_budget_unit', '백만원')
+  const [budgetUnit, setBudgetUnit] = useLocalStorage('eco_budget_unit', '만원')
+
+  // 구버전 localStorage 마이그레이션 — '백만원' 저장값을 '만원'으로 교체
+  useEffect(() => {
+    if (budgetUnit === '백만원') setBudgetUnit('만원')
+  }, [budgetUnit, setBudgetUnit])
 
   const settings: DashboardSettings = { sr_target: srTarget, top_k: topK, budget_unit: budgetUnit }
 
@@ -27,11 +32,7 @@ function Dashboard() {
 
   // ── 입력 상태 ───────────────────────────────────────────────────
   const [selectedKeyword, setSelectedKeyword] = useState('')
-  const [srFilter, setSrFilter] = useState<SrFilterV2>({
-    female_ceo: false,
-    disabled_corp: false,
-    social_corp: false,
-  })
+  const [srFilter, setSrFilter] = useState<SrFilterV2>({ sr_only: false })
   const [budget, setBudget] = useState(800)
 
   // ── 결과 상태 ───────────────────────────────────────────────────
@@ -193,7 +194,7 @@ function Dashboard() {
                   <span>추천 산출 중...</span>
                 </>
               ) : (
-                <span>품목을 선택하고 추천 재산출을 눌러주세요</span>
+                <span>품목을 선택하고 추천 다시 보기를 눌러주세요</span>
               )}
             </div>
           )}

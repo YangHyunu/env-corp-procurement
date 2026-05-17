@@ -116,7 +116,7 @@ MONTH_DAYS: float = 30.4           # 평균 1개월 일수 (Julian 평균)
 class RecommendV2Request:
     item_keyword: str
     budget_million_won: int
-    sr_filter: dict[str, bool]      # {social_corp, female_ceo, disabled_corp}
+    sr_only: bool = False           # 토글 — True 면 SR 보유 BRN 만 후보 풀에 포함
     top_k: int = 5
 
 
@@ -190,22 +190,16 @@ WHERE 1=1 {sr_clause}
 """
 
 
-def _build_sr_clause(sr_filter: dict[str, bool]) -> str:
-    parts: list[str] = []
-    if sr_filter.get("female_ceo"):
-        parts.append("AND mcs.female_ceo_flag")
-    if sr_filter.get("disabled_corp"):
-        parts.append("AND mcs.disabled_corp_flag")
-    if sr_filter.get("social_corp"):
-        parts.append("AND mcs.social_corp_flag")
-    return " ".join(parts)
+def _build_sr_clause(sr_only: bool) -> str:
+    """sr_only=True 면 SR 보유 BRN 만, False 면 전체."""
+    return "AND mcs.sr_count > 0" if sr_only else ""
 
 
 def retrieve(
-    conn, keyword: str, sr_filter: dict[str, bool],
+    conn, keyword: str, sr_only: bool,
 ) -> tuple[list[dict], KeywordFilter]:
     kf = resolve_keyword(keyword)
-    sql = RETRIEVE_SQL.format(sr_clause=_build_sr_clause(sr_filter))
+    sql = RETRIEVE_SQL.format(sr_clause=_build_sr_clause(sr_only))
     with _dict_cursor(conn) as cur:
         cur.execute(sql, {"prefix4": kf.prefix4, "name_regex": kf.name_regex})
         rows = [dict(r) for r in cur.fetchall()]
@@ -497,15 +491,6 @@ def _reason(c: dict, market_mean: Optional[float]) -> str:
                 parts.append(f"평균 낙찰률 {ar:.1f}%")
     else:
         parts.append("환경공단 활동 이력 부족")
-    sr_labels: list[str] = []
-    if c.get("female_ceo_flag"):
-        sr_labels.append("여성")
-    if c.get("disabled_corp_flag"):
-        sr_labels.append("장애인")
-    if c.get("social_corp_flag"):
-        sr_labels.append("사회적")
-    if sr_labels:
-        parts.append("+".join(sr_labels) + "기업 가점")
     return " · ".join(parts)
 
 
@@ -854,7 +839,7 @@ def _cutoff(conn) -> str:
 # ── Orchestrator ────────────────────────────────────────────────────
 def recommend(req: RecommendV2Request, dsn: str = DEFAULT_DSN) -> RecommendV2Response:
     with _connect(dsn) as conn:
-        candidates, kf = retrieve(conn, req.item_keyword, req.sr_filter)
+        candidates, kf = retrieve(conn, req.item_keyword, req.sr_only)
         cutoff = _cutoff(conn)
 
         if not candidates:

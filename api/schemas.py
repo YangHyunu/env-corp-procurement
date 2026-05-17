@@ -107,9 +107,8 @@ class RecommendResponse(BaseModel):
 
 # ── v2: 사전탐색 모드 ──────────────────────────────────────────────
 class SrFilterV2(BaseModel):
-    female_ceo: bool = False
-    disabled_corp: bool = False
-    social_corp: bool = False
+    """SR 토글 — ON 이면 SR 보유 BRN 만 후보 풀에 포함."""
+    sr_only: bool = False
 
 
 class RecommendV2Request(BaseModel):

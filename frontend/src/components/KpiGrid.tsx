@@ -46,7 +46,7 @@ export function KpiGrid({ kpi, budgetMillion }: Props) {
           avgPrice != null ? (
             <>
               {avgPrice.toLocaleString()}
-              <span style={{ fontSize: 10, fontWeight: 500, color: '#6b7280' }}>백만</span>
+              <span style={{ fontSize: 10, fontWeight: 500, color: '#6b7280' }}>만원</span>
             </>
           ) : (
             '—'

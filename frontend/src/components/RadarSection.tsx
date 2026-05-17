@@ -13,24 +13,21 @@ interface Props {
 }
 
 const AXIS_ORDER: (keyof AxesV2)[] = [
-  'sr_diversity',
   'track_record',
   'price_competitiveness',
   'supply_stability',
 ]
 
 const AXIS_LABEL: Record<keyof AxesV2, string> = {
-  supply_stability: '공급 안정',
-  sr_diversity: 'SR',
   track_record: '실적',
   price_competitiveness: '가격',
+  supply_stability: '공급 안정',
 }
 
 const AXIS_WEIGHT: Record<keyof AxesV2, string> = {
-  sr_diversity: '35%',
-  track_record: '30%',
-  price_competitiveness: '20%',
-  supply_stability: '15%',
+  track_record: '33%',
+  price_competitiveness: '34%',
+  supply_stability: '33%',
 }
 
 function clamp01(v: number): number {

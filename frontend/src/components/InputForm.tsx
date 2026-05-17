@@ -28,10 +28,6 @@ export function InputForm({
   onSubmit,
   loading,
 }: Props) {
-  const budgetMillions = budgetUnit === '억원' ? budget * 100 : budget
-  const avgRate = 0.87
-  const estPrice = Math.round(budgetMillions * avgRate)
-
   return (
     <aside
       style={{
@@ -58,7 +54,7 @@ export function InputForm({
           조회 조건
         </h2>
         <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>
-          품목 선택 시 자동 산출 · 그 외 조건은 재산출 버튼
+          품목 선택 시 자동 산출 · 그 외 조건은 다시 보기 버튼
         </span>
       </div>
 
@@ -117,25 +113,12 @@ export function InputForm({
         </div>
       </FormSection>
 
-      {/* 2. 정책 필터 */}
-      <FormSection label="정책 필터" step={2}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <PolicyCheck
-            label="사회적기업"
-            checked={srFilter.social_corp}
-            onChange={(v) => onSrFilterChange({ ...srFilter, social_corp: v })}
-          />
-          <PolicyCheck
-            label="여성기업"
-            checked={srFilter.female_ceo}
-            onChange={(v) => onSrFilterChange({ ...srFilter, female_ceo: v })}
-          />
-          <PolicyCheck
-            label="장애인기업"
-            checked={srFilter.disabled_corp}
-            onChange={(v) => onSrFilterChange({ ...srFilter, disabled_corp: v })}
-          />
-        </div>
+      {/* 2. SR 토글 */}
+      <FormSection label="SR 기업만 보기" step={2}>
+        <SrToggle
+          checked={srFilter.sr_only}
+          onChange={(v) => onSrFilterChange({ sr_only: v })}
+        />
       </FormSection>
 
       {/* 3. 예산 */}
@@ -169,9 +152,6 @@ export function InputForm({
             }}
           />
           <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500 }}>{budgetUnit}</span>
-        </div>
-        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 7 }}>
-          평균 낙찰률 87% → 예상 {estPrice.toLocaleString()}{budgetUnit}
         </div>
       </FormSection>
 
@@ -207,7 +187,7 @@ export function InputForm({
             e.currentTarget.style.boxShadow = '0 1px 2px rgba(79,70,229,0.3)'
           }}
         >
-          {loading ? '추천 산출 중...' : '추천 재산출'}
+          {loading ? '추천 산출 중...' : '추천 다시 보기'}
         </button>
       </div>
     </aside>
@@ -262,12 +242,10 @@ function FormSection({
   )
 }
 
-function PolicyCheck({
-  label,
+function SrToggle({
   checked,
   onChange,
 }: {
-  label: string
   checked: boolean
   onChange: (v: boolean) => void
 }) {
@@ -276,25 +254,53 @@ function PolicyCheck({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 9,
-        padding: '8px 11px',
+        justifyContent: 'space-between',
+        gap: 12,
+        padding: '10px 12px',
         border: `1px solid ${checked ? '#c7d2fe' : '#ebedf0'}`,
         borderRadius: 8,
         cursor: 'pointer',
         fontSize: 12,
-        transition: 'all 0.15s',
         fontWeight: 500,
         background: checked ? '#eef2ff' : '#fff',
         boxShadow: checked ? 'inset 0 0 0 1px rgba(79,70,229,0.1)' : 'none',
+        transition: 'all 0.15s',
       }}
     >
+      <span style={{ color: '#0f172a' }}>
+        {checked ? 'SR 보유 업체만' : '전체 (SR 무관)'}
+      </span>
+      <span
+        style={{
+          position: 'relative',
+          width: 34,
+          height: 18,
+          borderRadius: 999,
+          background: checked ? '#4f46e5' : '#cbd5e1',
+          transition: 'background 0.15s',
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: checked ? 18 : 2,
+            width: 14,
+            height: 14,
+            borderRadius: '50%',
+            background: '#fff',
+            boxShadow: '0 1px 2px rgba(15,23,42,0.2)',
+            transition: 'left 0.15s',
+          }}
+        />
+      </span>
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        style={{ accentColor: '#4f46e5' }}
+        style={{ display: 'none' }}
       />
-      {label}
     </label>
   )
 }

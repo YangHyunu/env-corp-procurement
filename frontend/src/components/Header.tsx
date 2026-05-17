@@ -175,7 +175,7 @@ export function Header({ settings, onSaveSettings }: Props) {
                 </select>
               </SettingsRow>
 
-              <SettingsRow label="추천 Top K">
+              <SettingsRow label="추천 노출 개수">
                 <select
                   value={draft.top_k}
                   onChange={(e) =>
@@ -199,7 +199,7 @@ export function Header({ settings, onSaveSettings }: Props) {
                   }
                   style={selectStyle}
                 >
-                  <option>백만원</option>
+                  <option>만원</option>
                   <option>억원</option>
                 </select>
               </SettingsRow>
@@ -231,7 +231,7 @@ export function Header({ settings, onSaveSettings }: Props) {
                   저장
                 </button>
                 <span style={{ fontSize: 10, color: '#6b7280', marginLeft: 'auto' }}>
-                  localStorage 에 저장됨
+                  이 브라우저에 저장됨
                 </span>
               </div>
             </div>

@@ -91,8 +91,8 @@ export function CompareTable({ items }: Props) {
         {cols.map((c, i) => (
           <Cell key={c.brn} winner={i === bestPrice}>
             {i === bestPrice
-              ? <b>{c.expected_price.point_million.toLocaleString()}백만</b>
-              : `${c.expected_price.point_million.toLocaleString()}백만`}
+              ? <b>{c.expected_price.point_million.toLocaleString()}만원</b>
+              : `${c.expected_price.point_million.toLocaleString()}만원`}
           </Cell>
         ))}
 

@@ -277,7 +277,7 @@ def recommend_v2_endpoint(req: RecommendV2Request) -> RecommendV2Response:
             RecommendV2DTO(
                 item_keyword=req.item_keyword,
                 budget_million_won=req.budget_million_won,
-                sr_filter=req.sr_filter.model_dump(),
+                sr_only=req.sr_filter.sr_only,
                 top_k=req.top_k,
             ),
             dsn=DSN,

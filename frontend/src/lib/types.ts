@@ -1,9 +1,7 @@
 // ── V2 타입 (api/schemas.py 1:1 미러) ──────────────────────────────
 
 export interface SrFilterV2 {
-  female_ceo: boolean
-  disabled_corp: boolean
-  social_corp: boolean
+  sr_only: boolean
 }
 
 export interface RecommendV2Request {
@@ -101,7 +99,6 @@ export interface ComplianceInfo {
 
 export interface AxesV2 {
   supply_stability: number
-  sr_diversity: number
   track_record: number
   price_competitiveness: number
 }

@@ -128,7 +128,7 @@ def _apply_ranker(pool: pd.DataFrame, weights: dict[str, float]) -> pd.DataFrame
     out["composite_score"] = [s["rule_score"] for s in scored]
     out["is_sr_demoted"]   = [s["is_sr_demoted"] for s in scored]
     out["axis_supply_stability"]      = [s["axes"]["supply_stability"] for s in scored]
-    out["axis_sr_diversity"]          = [s["axes"]["sr_diversity"] for s in scored]
+    out["axis_sr_diversity"]          = [s["axes"].get("sr_diversity", 0.0) for s in scored]
     out["axis_track_record"]          = [s["axes"]["track_record"] for s in scored]
     out["axis_price_competitiveness"] = [s["axes"]["price_competitiveness"] for s in scored]
 
@@ -176,7 +176,7 @@ def _to_recommendation(rank: int, row: pd.Series, weights: dict[str, float]) -> 
     }
     weighted_segments = {
         "supply_stability":      weights["supply_stability"]      * axes["supply_stability"],
-        "sr_diversity":          weights["sr_diversity"]          * axes["sr_diversity"],
+        "sr_diversity":          weights.get("sr_diversity", 0.0) * axes.get("sr_diversity", 0.0),
         "track_record":          weights["track_record"]          * axes["track_record"],
         "price_competitiveness": weights["price_competitiveness"] * float(row["axis_price_competitiveness"]),
     }

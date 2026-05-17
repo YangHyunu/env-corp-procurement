@@ -70,9 +70,9 @@ export function PriceBar({ price, kpi }: Props) {
           }}
         >
           {isExtrapolated
-            ? `거래 규모 외삽 — 신뢰도 낮음`
+            ? `유사 거래 부족 — 신뢰도 낮음`
             : isSparse
-              ? `표본 ${n_samples}건 — 점추정만`
+              ? `표본 ${n_samples}건 — 단일 추정값만`
               : `표본 ${n_samples}건`}
         </span>
       </div>
@@ -224,7 +224,7 @@ export function PriceBar({ price, kpi }: Props) {
           flexWrap: 'wrap',
         }}
       >
-        <StatItem label="예상가" value={`${point_million.toLocaleString()}백만`} />
+        <StatItem label="예상가" value={`${point_million.toLocaleString()}만원`} />
         {hasIQR && (
           <StatItem
             label="구간(50%)"
@@ -251,7 +251,7 @@ export function PriceBar({ price, kpi }: Props) {
           ? `이 업체 유사 규모 거래 부재 — 시장 평균/전체 평균으로 추정 (BRN 전체 ${n_samples_overall ?? 0}건)`
           : hasIQR
             ? `과거 유사 규모 ${n_samples}건 기준 · 구간·변동폭 산출 가능`
-            : `유사 규모 ${n_samples}건 — 구간·변동폭 산출 불가, 점추정만 표시`}
+            : `유사 규모 ${n_samples}건 — 구간·변동폭 산출 불가, 단일 추정값만 표시`}
       </div>
     </div>
   )

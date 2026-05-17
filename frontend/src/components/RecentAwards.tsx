@@ -53,7 +53,7 @@ export function RecentAwards({ awards }: Props) {
                 </td>
                 <td style={{ ...tdStyle, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                   {a.sucsfbid_amt != null
-                    ? `${Math.round(a.sucsfbid_amt / 1_000_000).toLocaleString()}백만`
+                    ? `${Math.round(a.sucsfbid_amt / 1_000_000).toLocaleString()}만원`
                     : '—'}
                   {a.sucsfbid_rate != null ? ` / ${a.sucsfbid_rate.toFixed(1)}%` : ''}
                 </td>
